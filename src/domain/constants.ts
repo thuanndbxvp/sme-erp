@@ -30,3 +30,31 @@ export const REFERENCE_TYPE = {
   ADJUSTMENT: "ADJUSTMENT",
 } as const;
 export type ReferenceType = (typeof REFERENCE_TYPE)[keyof typeof REFERENCE_TYPE];
+
+// ===== ENUM ĐƠN HÀNG (mirror prisma/schema.prisma — có test kiểm khớp) =====
+export const ORDER_STATUS = {
+  PENDING: "PENDING",
+  DELIVERED: "DELIVERED",
+  CANCELLED: "CANCELLED",
+} as const;
+export type OrderStatusValue = (typeof ORDER_STATUS)[keyof typeof ORDER_STATUS];
+
+export const PURCHASE_STATUS = {
+  ORDERED: "ORDERED",
+  RECEIVED: "RECEIVED",
+  CANCELLED: "CANCELLED",
+} as const;
+export type PurchaseStatusValue = (typeof PURCHASE_STATUS)[keyof typeof PURCHASE_STATUS];
+
+export const FULFILLMENT_TYPE = {
+  WAREHOUSE: "WAREHOUSE",
+  DROPSHIP: "DROPSHIP",
+} as const;
+export type FulfillmentTypeValue = (typeof FULFILLMENT_TYPE)[keyof typeof FULFILLMENT_TYPE];
+
+export const PAYMENT_STATUS = {
+  UNPAID: "UNPAID",
+  PARTIAL: "PARTIAL",
+  PAID: "PAID",
+} as const;
+export type PaymentStatusValue = (typeof PAYMENT_STATUS)[keyof typeof PAYMENT_STATUS];

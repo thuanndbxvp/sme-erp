@@ -66,8 +66,10 @@ model Product {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  inventory WarehouseInventory[]
-  movements InventoryMovement[]
+  inventory      WarehouseInventory[]
+  movements      InventoryMovement[]
+  salesItems     SalesOrderItem[]
+  purchaseItems  PurchaseOrderItem[]
 }
 
 model Customer {
@@ -79,6 +81,8 @@ model Customer {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  salesOrders SalesOrder[]
 }
 
 model Supplier {
@@ -89,6 +93,8 @@ model Supplier {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  purchaseOrders PurchaseOrder[]
 }
 
 model Warehouse {
@@ -99,7 +105,8 @@ model Warehouse {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  inventory WarehouseInventory[]
+  inventory   WarehouseInventory[]
+  salesOrders SalesOrder[]
 }
 
 // Quỹ tiền mặt / ngân hàng. balance = NGUỒN SỰ THẬT số dư tiền.
@@ -155,6 +162,130 @@ model InventoryMovement {
   @@index([referenceType, referenceId])
   // Idempotent: 1 (reference, reason) chỉ sinh 1 movement.
   @@unique([referenceType, referenceId, reason])
+}
+
+// ===== ĐƠN HÀNG =====
+enum OrderStatus {
+  PENDING
+  DELIVERED
+  CANCELLED
+}
+
+enum PurchaseStatus {
+  ORDERED
+  RECEIVED
+  CANCELLED
+}
+
+enum FulfillmentType {
+  WAREHOUSE
+  DROPSHIP
+}
+
+// DERIVE từ Invoice — KHÔNG set tay từ client (nguồn sự thật = Invoice.balanceDue).
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+}
+
+model SalesOrder {
+  id                    String          @id @default(cuid())
+  orderCode             String          @unique
+  status                OrderStatus     @default(PENDING)
+  paymentStatus         PaymentStatus   @default(UNPAID) // DERIVE, không set tay
+  fulfillmentType       FulfillmentType @default(WAREHOUSE)
+  customerId            String
+  warehouseId           String?
+  linkedPurchaseOrderId String?         @unique // dropship (điền ở P2-2)
+  salespersonId         String? // người bán → hoa hồng
+  userId                String? // người tạo
+  saleDate              DateTime?
+  deliveredDate         DateTime?
+  totalAmount           Decimal         @default(0) @db.Decimal(15, 2)
+  taxAmount             Decimal         @default(0) @db.Decimal(15, 2)
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  customer  Customer         @relation(fields: [customerId], references: [id])
+  warehouse Warehouse?       @relation(fields: [warehouseId], references: [id])
+  items     SalesOrderItem[]
+
+  @@index([status])
+  @@index([customerId, status])
+}
+
+model SalesOrderItem {
+  id           String  @id @default(cuid())
+  salesOrderId String
+  productId    String?
+  productName  String
+  unit         String
+  qty          Int
+  sellPrice    Decimal @db.Decimal(15, 2) // đơn giá
+  sellTotal    Decimal @db.Decimal(15, 2) // = sellPrice * qty (thành tiền dòng, chưa thuế)
+  baseCost     Decimal @default(0) @db.Decimal(15, 2) // ĐƠN GIÁ vốn/unit (không lẫn tổng)
+  profit       Decimal @default(0) @db.Decimal(15, 2) // chốt lúc giao — báo cáo lãi dùng field này
+  taxAmount    Decimal @default(0) @db.Decimal(15, 2)
+
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  product    Product?   @relation(fields: [productId], references: [id])
+
+  @@index([salesOrderId])
+}
+
+model PurchaseOrder {
+  id            String         @id @default(cuid())
+  orderCode     String         @unique
+  status        PurchaseStatus @default(ORDERED)
+  paymentStatus PaymentStatus  @default(UNPAID) // DERIVE, không set tay
+  supplierId    String
+  warehouseId   String?
+  userId        String?
+  orderDate     DateTime?
+  receivedDate  DateTime?
+  totalAmount   Decimal        @default(0) @db.Decimal(15, 2)
+  taxAmount     Decimal        @default(0) @db.Decimal(15, 2)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  supplier Supplier            @relation(fields: [supplierId], references: [id])
+  items    PurchaseOrderItem[]
+
+  @@index([status])
+  @@index([supplierId, status])
+}
+
+model PurchaseOrderItem {
+  id              String  @id @default(cuid())
+  purchaseOrderId String
+  productId       String?
+  productName     String
+  unit            String
+  qty             Int
+  buyPrice        Decimal @db.Decimal(15, 2) // đơn giá nhập
+  buyTotal        Decimal @db.Decimal(15, 2) // = buyPrice * qty
+  taxAmount       Decimal @default(0) @db.Decimal(15, 2)
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product       Product?      @relation(fields: [productId], references: [id])
+
+  @@index([purchaseOrderId])
+}
+
+// Lịch sử chuyển trạng thái đơn (C4: updateStatus ghi history trước khi side-effect).
+// referenceType = SALES_ORDER | PURCHASE_ORDER; fromStatus null = lúc tạo.
+model OrderStatusHistory {
+  id            String   @id @default(cuid())
+  referenceType String
+  referenceId   String
+  fromStatus    String?
+  toStatus      String
+  userId        String?
+  note          String?
+  createdAt     DateTime @default(now())
+
+  @@index([referenceType, referenceId])
 }
 
 // ===== HẠ TẦNG =====
