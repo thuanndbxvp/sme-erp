@@ -9,6 +9,9 @@ const config = {
   },
   clearMocks: true,
   collectCoverageFrom: ["src/**/*.ts", "!src/**/*.d.ts"],
+  // Integration test chạm Neon (remote pooler, giới hạn connection). Chạy tuần tự
+  // để nhiều suite không mở PrismaClient song song làm cạn connection.
+  maxWorkers: 1,
 };
 
 module.exports = config;

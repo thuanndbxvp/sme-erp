@@ -16,6 +16,9 @@ import { OutboxService, OUTBOX_MAX_ATTEMPTS } from "@/services/outbox.service";
 const hasDb = !!process.env.DATABASE_URL;
 const describeIf = hasDb ? describe : describe.skip;
 
+// Integration test chạm Neon remote — transaction + round-trip mạng, nới timeout.
+jest.setTimeout(60_000);
+
 const prisma = new PrismaClient();
 const TEST_TYPE = "__test_outbox__";
 

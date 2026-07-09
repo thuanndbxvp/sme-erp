@@ -63,8 +63,9 @@ export class OutboxService {
   static async getPending(prisma: PrismaClient, limit: number, now: Date) {
     const lockedUntil = new Date(now.getTime() + LOCK_DURATION_MS);
 
-    return prisma.$transaction(async (tx) => {
-      const rows = await tx.$queryRaw<Array<{ id: string }>>`
+    return prisma.$transaction(
+      async (tx) => {
+        const rows = await tx.$queryRaw<Array<{ id: string }>>`
         SELECT "id" FROM "OutboxEvent"
         WHERE (
           ("status" = 'PENDING')
@@ -76,18 +77,22 @@ export class OutboxService {
         FOR UPDATE SKIP LOCKED
       `;
 
-      if (rows.length === 0) {
-        return [];
-      }
-      const ids = rows.map((r) => r.id);
+        if (rows.length === 0) {
+          return [];
+        }
+        const ids = rows.map((r) => r.id);
 
-      await tx.outboxEvent.updateMany({
-        where: { id: { in: ids } },
-        data: { status: "PROCESSING", lockedUntil },
-      });
+        await tx.outboxEvent.updateMany({
+          where: { id: { in: ids } },
+          data: { status: "PROCESSING", lockedUntil },
+        });
 
-      return tx.outboxEvent.findMany({ where: { id: { in: ids } } });
-    });
+        return tx.outboxEvent.findMany({ where: { id: { in: ids } } });
+      },
+      // Remote pooler (Neon): nới thời gian chờ cấp connection + chạy transaction
+      // để 2 worker song song trong test SKIP LOCKED không timeout.
+      { maxWait: 15_000, timeout: 20_000 },
+    );
   }
 
   /** Đánh dấu xử lý xong. */
