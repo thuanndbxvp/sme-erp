@@ -25,10 +25,14 @@ export interface CreatePurchaseOrderMeta {
 }
 
 export class PurchaseOrderService {
-  static async create(
+  /**
+   * Tạo PO TRONG transaction đang có (tx). Tách khỏi create() để orchestrator
+   * (C5) tạo PO dropship cùng transaction với SO. Trả về order (đã include items).
+   */
+  static async createInTx(
+    tx: TxClient,
     input: CreatePurchaseOrderInput,
     meta: CreatePurchaseOrderMeta = {},
-    prisma: PrismaClient = defaultPrisma,
   ) {
     const now = meta.now ?? new Date();
     const random = meta.random ?? 0.5;
@@ -52,36 +56,42 @@ export class PurchaseOrderService {
     });
     const totalAmount = subtotal.add(taxTotal);
 
-    return prisma.$transaction(async (tx) => {
-      const order = await tx.purchaseOrder.create({
-        data: {
-          orderCode: generateOrderCode("PO", now, random),
-          status: "ORDERED",
-          paymentStatus: "UNPAID",
-          supplierId: input.supplierId,
-          warehouseId: input.warehouseId ?? null,
-          userId: meta.userId ?? null,
-          orderDate: input.orderDate ?? now,
-          totalAmount: totalAmount.toDecimalString(),
-          taxAmount: taxTotal.toDecimalString(),
-          items: { create: items },
-        },
-        include: { items: true },
-      });
-
-      await tx.orderStatusHistory.create({
-        data: {
-          referenceType: REFERENCE_TYPE.PURCHASE_ORDER,
-          referenceId: order.id,
-          fromStatus: null,
-          toStatus: "ORDERED",
-          userId: meta.userId ?? null,
-          note: "Tạo đơn",
-        },
-      });
-
-      return order;
+    const order = await tx.purchaseOrder.create({
+      data: {
+        orderCode: generateOrderCode("PO", now, random),
+        status: "ORDERED",
+        paymentStatus: "UNPAID",
+        supplierId: input.supplierId,
+        warehouseId: input.warehouseId ?? null,
+        userId: meta.userId ?? null,
+        orderDate: input.orderDate ?? now,
+        totalAmount: totalAmount.toDecimalString(),
+        taxAmount: taxTotal.toDecimalString(),
+        items: { create: items },
+      },
+      include: { items: true },
     });
+
+    await tx.orderStatusHistory.create({
+      data: {
+        referenceType: REFERENCE_TYPE.PURCHASE_ORDER,
+        referenceId: order.id,
+        fromStatus: null,
+        toStatus: "ORDERED",
+        userId: meta.userId ?? null,
+        note: "Tạo đơn",
+      },
+    });
+
+    return order;
+  }
+
+  static async create(
+    input: CreatePurchaseOrderInput,
+    meta: CreatePurchaseOrderMeta = {},
+    prisma: PrismaClient = defaultPrisma,
+  ) {
+    return prisma.$transaction((tx) => PurchaseOrderService.createInTx(tx, input, meta));
   }
 
   static async findByIdOrThrow(id: string, prisma: PrismaClient = defaultPrisma) {

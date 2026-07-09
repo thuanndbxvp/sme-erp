@@ -49,3 +49,22 @@ export const createPurchaseOrderSchema = z.object({
 
 export type CreateSalesOrderInput = z.infer<typeof createSalesOrderSchema>;
 export type CreatePurchaseOrderInput = z.infer<typeof createPurchaseOrderSchema>;
+
+/**
+ * Tạo đơn bán dropship (C5): SO gắn 1 PO. Ngoài dữ liệu SO, cần thông tin PO
+ * (supplier + giá nhập từng dòng). qty của SO dùng lại cho PO (bán bao nhiêu mua
+ * bấy nhiêu). refine: fulfillmentType phải DROPSHIP.
+ */
+export const dropshipItemInput = salesOrderItemInput.extend({
+  buyPrice: moneySchema, // giá nhập NCC cho dòng này (tạo PO)
+});
+
+export const createDropshipOrderSchema = z.object({
+  customerId: nonEmptyString,
+  supplierId: nonEmptyString,
+  salespersonId: z.string().min(1).optional(),
+  saleDate: z.coerce.date().optional(),
+  items: z.array(dropshipItemInput).min(1, "Đơn phải có ít nhất 1 dòng"),
+});
+
+export type CreateDropshipOrderInput = z.infer<typeof createDropshipOrderSchema>;

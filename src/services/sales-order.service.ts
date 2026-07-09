@@ -30,15 +30,19 @@ export interface CreateSalesOrderMeta {
 }
 
 export class SalesOrderService {
-  static async create(
+  /**
+   * Tạo SO TRONG transaction đang có (tx). Tách khỏi create() để orchestrator
+   * (C5) gọi cùng transaction với PO dropship. `linkedPurchaseOrderId` chỉ set
+   * cho đơn dropship. Tính lại tổng server-side từ items.
+   */
+  static async createInTx(
+    tx: TxClient,
     input: CreateSalesOrderInput,
-    meta: CreateSalesOrderMeta = {},
-    prisma: PrismaClient = defaultPrisma,
+    meta: CreateSalesOrderMeta & { linkedPurchaseOrderId?: string } = {},
   ) {
     const now = meta.now ?? new Date();
     const random = meta.random ?? 0.5;
 
-    // Tính thành tiền từng dòng + tổng đơn bằng Money (decimal).
     let subtotal = Money.zero();
     let taxTotal = Money.zero();
     const items = input.items.map((it) => {
@@ -59,38 +63,45 @@ export class SalesOrderService {
     });
     const totalAmount = subtotal.add(taxTotal);
 
-    return prisma.$transaction(async (tx) => {
-      const order = await tx.salesOrder.create({
-        data: {
-          orderCode: generateOrderCode("SO", now, random),
-          status: "PENDING",
-          paymentStatus: "UNPAID",
-          fulfillmentType: input.fulfillmentType,
-          customerId: input.customerId,
-          warehouseId: input.warehouseId ?? null,
-          salespersonId: input.salespersonId ?? null,
-          userId: meta.userId ?? null,
-          saleDate: input.saleDate ?? now,
-          totalAmount: totalAmount.toDecimalString(),
-          taxAmount: taxTotal.toDecimalString(),
-          items: { create: items },
-        },
-        include: { items: true },
-      });
-
-      await tx.orderStatusHistory.create({
-        data: {
-          referenceType: REFERENCE_TYPE.SALES_ORDER,
-          referenceId: order.id,
-          fromStatus: null,
-          toStatus: "PENDING",
-          userId: meta.userId ?? null,
-          note: "Tạo đơn",
-        },
-      });
-
-      return order;
+    const order = await tx.salesOrder.create({
+      data: {
+        orderCode: generateOrderCode("SO", now, random),
+        status: "PENDING",
+        paymentStatus: "UNPAID",
+        fulfillmentType: input.fulfillmentType,
+        customerId: input.customerId,
+        warehouseId: input.warehouseId ?? null,
+        linkedPurchaseOrderId: meta.linkedPurchaseOrderId ?? null,
+        salespersonId: input.salespersonId ?? null,
+        userId: meta.userId ?? null,
+        saleDate: input.saleDate ?? now,
+        totalAmount: totalAmount.toDecimalString(),
+        taxAmount: taxTotal.toDecimalString(),
+        items: { create: items },
+      },
+      include: { items: true },
     });
+
+    await tx.orderStatusHistory.create({
+      data: {
+        referenceType: REFERENCE_TYPE.SALES_ORDER,
+        referenceId: order.id,
+        fromStatus: null,
+        toStatus: "PENDING",
+        userId: meta.userId ?? null,
+        note: "Tạo đơn",
+      },
+    });
+
+    return order;
+  }
+
+  static async create(
+    input: CreateSalesOrderInput,
+    meta: CreateSalesOrderMeta = {},
+    prisma: PrismaClient = defaultPrisma,
+  ) {
+    return prisma.$transaction((tx) => SalesOrderService.createInTx(tx, input, meta));
   }
 
   static async findByIdOrThrow(id: string, prisma: PrismaClient = defaultPrisma) {
