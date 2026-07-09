@@ -65,6 +65,9 @@ model Product {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  inventory WarehouseInventory[]
+  movements InventoryMovement[]
 }
 
 model Customer {
@@ -95,6 +98,8 @@ model Warehouse {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  inventory WarehouseInventory[]
 }
 
 // Quỹ tiền mặt / ngân hàng. balance = NGUỒN SỰ THẬT số dư tiền.
@@ -106,6 +111,50 @@ model Account {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ===== KHO =====
+// Tồn theo lô. avgCost = giá vốn bình quân gia quyền (WAC) per unit.
+model WarehouseInventory {
+  id          String    @id @default(cuid())
+  warehouseId String
+  productId   String
+  quantity    Int       @default(0)
+  avgCost     Decimal   @default(0) @db.Decimal(15, 2)
+  // Lệch Mục B (String?) có chủ đích: Postgres coi NULL là distinct trong unique,
+  // nên null-batch KHÔNG chặn trùng → tìm-hoặc-tạo bị race. Dùng "" = "không lô".
+  batchNumber String    @default("")
+  expiryDate  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  product   Product   @relation(fields: [productId], references: [id])
+
+  @@unique([warehouseId, productId, batchNumber])
+  @@index([productId])
+}
+
+// Event table — nguồn COGS/tồn. Mỗi lần nhập/xuất ghi 1 dòng bất biến.
+model InventoryMovement {
+  id            String   @id @default(cuid())
+  type          String // IN | OUT
+  reason        String // PURCHASE_RECEIPT | SALES_SHIPMENT | RETURN_* | ADJUST_* | DROPSHIP_*
+  productId     String
+  warehouseId   String?
+  quantity      Int
+  unitCost      Decimal  @db.Decimal(15, 2)
+  totalCost     Decimal  @db.Decimal(15, 2)
+  referenceType String
+  referenceId   String
+  createdAt     DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+  @@index([referenceType, referenceId])
+  // Idempotent: 1 (reference, reason) chỉ sinh 1 movement.
+  @@unique([referenceType, referenceId, reason])
 }
 
 // ===== HẠ TẦNG =====

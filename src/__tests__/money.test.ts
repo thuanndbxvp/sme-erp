@@ -39,6 +39,20 @@ describe("Money util (P0-3)", () => {
       expect(Money.of("100").negate().toDecimalString()).toBe("-100.00");
       expect(Money.of("-100").abs().toDecimalString()).toBe("100.00");
     });
+
+    it("divBy — WAC: (10*100 + 20*130)/30 = 120.00", () => {
+      const oldValue = Money.of("100").mul(10);
+      const inValue = Money.of("130").mul(20);
+      expect(oldValue.add(inValue).divBy(30).toDecimalString()).toBe("120.00");
+    });
+
+    it("divBy giữ chính xác trước khi làm tròn: 100/3 -> 33.33", () => {
+      expect(Money.of("100").divBy(3).toDecimalString()).toBe("33.33");
+    });
+
+    it("divBy chia 0 ném lỗi", () => {
+      expect(() => Money.of("100").divBy(0)).toThrow(/chia cho 0/);
+    });
   });
 
   describe("làm tròn HALF_UP về 2 chữ số", () => {

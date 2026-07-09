@@ -62,6 +62,19 @@ export class Money {
     return new Money(this.value.times(factor));
   }
 
+  /**
+   * Chia cho số thuần (vd tổng giá trị / số lượng → đơn giá bình quân WAC).
+   * Giữ độ chính xác nội bộ của decimal.js; làm tròn SCALE chỉ khi xuất ra.
+   * Chia cho 0 → ném lỗi.
+   */
+  divBy(divisor: Decimal.Value): Money {
+    const d = new D(divisor);
+    if (d.isZero()) {
+      throw new Error("Money: chia cho 0");
+    }
+    return new Money(this.value.dividedBy(d));
+  }
+
   /** So sánh: trả -1 nếu this < other, 0 nếu bằng, 1 nếu lớn hơn. */
   compare(other: MoneyInput): -1 | 0 | 1 {
     return this.value.comparedTo(Money.of(other).value) as -1 | 0 | 1;
