@@ -202,6 +202,7 @@ model SalesOrder {
   userId                String? // người tạo
   saleDate              DateTime?
   deliveredDate         DateTime?
+  cancelledDate         DateTime?
   totalAmount           Decimal         @default(0) @db.Decimal(15, 2)
   taxAmount             Decimal         @default(0) @db.Decimal(15, 2)
   createdAt             DateTime        @default(now())
@@ -244,6 +245,7 @@ model PurchaseOrder {
   userId        String?
   orderDate     DateTime?
   receivedDate  DateTime?
+  cancelledDate DateTime?
   totalAmount   Decimal        @default(0) @db.Decimal(15, 2)
   taxAmount     Decimal        @default(0) @db.Decimal(15, 2)
   createdAt     DateTime       @default(now())

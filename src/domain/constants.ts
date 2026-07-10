@@ -20,6 +20,8 @@ export const MOVEMENT_REASON = {
   ADJUST_IN: "ADJUST_IN", // điều chỉnh tăng
   ADJUST_OUT: "ADJUST_OUT", // điều chỉnh giảm
   DROPSHIP_OUT: "DROPSHIP_OUT", // xuất ảo dropship
+  CANCEL_SALE: "CANCEL_SALE", // hủy bán (hoàn kho)
+  CANCEL_PURCHASE: "CANCEL_PURCHASE", // hủy mua (trả NCC)
 } as const;
 export type MovementReason = (typeof MOVEMENT_REASON)[keyof typeof MOVEMENT_REASON];
 

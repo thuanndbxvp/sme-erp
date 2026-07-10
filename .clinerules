@@ -1,0 +1,167 @@
+# ERP Thương mại SME — Cline Rules (Hiến pháp dự án)
+
+> File này tổng hợp các nguyên tắc bất di bất dịch từ `PLAN_NEW_ERP_SME.md`, `PLAN_NEW_ERP_SME_DETAILED.md` và `PROMPTS_NEW_ERP_SME.md`.
+> Mọi task, code, review PHẢI tuân thủ các luật dưới đây. Vi phạm = dừng và hỏi lại user.
+
+---
+
+## I. NGUYÊN TẮC KIẾN TRÚC (Bài học từ VietTung V2)
+
+1. **KHÔNG có kế toán kép.** SME thuần — số liệu tài chính tính trực tiếp từ chứng từ vận hành (đơn hàng, giao dịch, hóa đơn, tồn kho). Cấm Journal Entry / sổ cái / bảng cân đối VAS.
+2. **Một nguồn sự thật cho mỗi dữ kiện:**
+   - Số dư tiền = `Account.balance` (cập nhật atomic qua Transaction)
+   - Công nợ = `Invoice.balanceDue` (không lưu song song ở Order)
+   - `Order.paymentStatus` là DERIVE từ Invoice, không set từ client
+   - Giá vốn/tồn = `InventoryMovement` + `WarehouseInventory.avgCost` (WAC)
+   - Lãi lỗ = từ `SalesOrderItem.profit` (chốt lúc giao) + chi phí Transaction
+3. **Luôn TÍNH LẠI trạng thái trên server** từ số tiền/số lượng thực. KHÔNG tin dữ liệu client gửi lên.
+4. **State machine tường minh** + `SELECT ... FOR UPDATE` khi đổi trạng thái/tiền/kho.
+5. **Tiền dùng `decimal.js` qua `Money` util.** DB `Decimal(15,2)`. CẤM `number` cho tiền.
+6. **No console.*, no ghi file trong request path.** Dùng Pino logger (`@/lib/logger`).
+7. **Enum tối giản từ đầu**, chỉ thêm khi có nhu cầu thật.
+8. **Side-effect bất đồng bộ dùng Outbox pattern** (FOR UPDATE SKIP LOCKED + backoff + dead-letter).
+
+---
+
+## II. STACK & QUY ƯỚC KỸ THUẬT (chốt cứng)
+
+| Hạng mục | Lựa chọn |
+|----------|---------|
+| Ngôn ngữ | TypeScript `strict: true` — Cấm `any` trừ có lý do ghi rõ |
+| Framework | Next.js 15 App Router + React 19 |
+| DB | PostgreSQL 15+ — transaction + `FOR UPDATE` cho tiền/kho |
+| ORM | Prisma 6 — migration bắt buộc, không `db push` staging/prod |
+| Tiền tệ | `decimal.js` qua `Money` util (`src/domain/money.ts`) |
+| Test | Jest + ts-jest, prismaMock |
+| Auth | NextAuth (DB session) — RBAC load từ DB mỗi request |
+| Style | ESLint + Prettier — CI chặn nếu lint fail |
+| Log | Pino (`@/lib/logger`) |
+
+### Quy ước đặt tên
+- **Service file:** `<entity>.service.ts` — export class + method tĩnh hoặc instance rõ ràng
+- **Validation:** `zod` schema tại `src/lib/validations/<entity>.ts` — mọi input action/route PHẢI qua zod
+- **Money field:** đơn giá = `*Price`, tổng dòng = `*Total`, thành tiền = `*Amount`
+- **Enum:** `prisma/schema.prisma` + mirror hằng số `src/domain/constants.ts` (đồng bộ, có test kiểm khớp)
+
+### Cấu trúc thư mục
+```
+src/
+  app/                # routes, server actions (chỉ validate + gọi service)
+  services/           # TOÀN BỘ business logic
+  domain/             # constants, state-machine, money, payment-status
+  lib/                # prisma, auth, logger, validations, utils
+  components/         # UI
+  __tests__/          # test
+prisma/
+  schema.prisma
+  migrations/
+  seed.ts
+```
+
+---
+
+## III. INVARIANTS NGHIỆP VỤ (bất biến — test bắt buộc)
+
+### C1. InventoryService.recordMovement
+- `SELECT ... FOR UPDATE` row `WarehouseInventory` trước khi đọc/ghi
+- OUT làm `quantity` âm → throw "Kho không đủ hàng" (chặn oversell)
+- IN có `unitCost` → tính lại `avgCost = (oldQty*oldCost + inQty*unitCost) / newQty`
+- Ghi 1 `InventoryMovement`. Idempotent theo `(referenceType, referenceId, reason)` khi cần
+
+### C2. TransactionService.create
+- `SELECT ... FOR UPDATE` account trước khi cập nhật `balance`
+- INCOME → `balance += amount`; EXPENSE → `balance -= amount`
+- Dùng `Money`, không float. OUTFLOW vượt số dư (nếu bật kiểm) → throw
+
+### C3. Thanh toán & công nợ
+- **Invoice là nguồn sự thật công nợ:** `balanceDue = totalAmount - paidAmount`, luôn ≥ 0
+- `Order.paymentStatus` = `computePaymentStatus(paidAmount, totalAmount)` — DERIVE, không set từ client
+- Ghi Payment → cập nhật Invoice → cập nhật `Account.balance` → derive `Order.paymentStatus` — TẤT CẢ trong 1 transaction
+- Hủy đơn → Invoice `CANCELLED`, `paidAmount=0`, order về `UNPAID`; hoàn tiền tạo Transaction ngược dấu đúng chiều
+
+### C4. State machine trạng thái đơn
+- `SalesOrder`: `PENDING → {DELIVERED, CANCELLED}`, `DELIVERED → {CANCELLED}`, `CANCELLED → {}`
+- `PurchaseOrder`: `ORDERED → {RECEIVED, CANCELLED}`, `RECEIVED → {CANCELLED}`, `CANCELLED → {}`
+- `updateStatus` PHẢI `SELECT ... FOR UPDATE` order row, validate transition, ghi history, rồi mới side-effect
+- Chuyển trạng thái không hợp lệ → throw, không âm thầm bỏ qua
+
+### C5. OrderOrchestrator (tạo/sửa đơn)
+- Toàn bộ trong 1 `prisma.$transaction`
+- DROPSHIP: tạo PO trước (status ORDERED), tạo SO link `linkedPurchaseOrderId`, side-effect kho khi DELIVERED
+- Hủy SO dropship phải đồng bộ PO liên kết (không để PO treo)
+- Không sửa đơn đã DELIVERED/RECEIVED (yêu cầu quy trình trả hàng)
+
+### C6. CommissionService
+- Key theo `salespersonId` (fallback `userId` cho đơn cũ), chỉ tính đơn `DELIVERED`
+- Payout idempotent theo `@@unique([userId, periodMonth, periodYear])`
+- Hủy đơn sau khi đã tính hoa hồng → phải trừ lại (không double-count)
+
+### C7. Outbox
+- `getPending` dùng `FOR UPDATE SKIP LOCKED` + `lockedUntil`
+- Retry backoff, dead-letter sau N lần. Handler idempotent (check đã xử lý trước khi làm)
+
+---
+
+## IV. QUY TRÌNH LÀM VIỆC (mỗi task)
+
+### E1. Git & branch
+- `main` luôn deploy được. Không commit thẳng vào `main`
+- Nhánh theo task: `feat/P-X-task-name`. 1 task = 1 nhánh = 1 PR
+- Commit convention: `type(scope): mô tả [P-X]` (type: feat/fix/refactor/test/chore)
+- Không force-push nhánh chung; không `reset --hard` nhánh người khác
+
+### E2. Vòng đời 1 task
+1. Đọc AC của task (Mục D trong PLAN_DETAILED) + invariant liên quan (Mục C)
+2. Tạo nhánh mới từ `main` cập nhật
+3. Viết test TRƯỚC hoặc song song cho AC
+4. Code — chỉ đụng file trong phạm vi task
+5. **3 GATE** (bắt buộc, dán output vào PR):
+   - `npx tsc --noEmit` → 0 lỗi
+   - `npm run lint` → 0 lỗi
+   - `npm test` (hoặc jest phần liên quan) → xanh
+6. Mở PR với mô tả: task, thay đổi, cách test, AC đã verify + bằng chứng
+
+### E3. Definition of Done (checklist)
+- [ ] Code chạy, `tsc`+`lint`+`test` xanh (có output kèm PR)
+- [ ] AC của task được verify bằng bằng chứng thật (test pass / query DB / screenshot)
+- [ ] Luồng tiền/kho/trạng thái: có test HÀNH VI chứng minh số đổi đúng, không chỉ compile
+- [ ] Không phá test cũ (chạy full suite trước merge)
+- [ ] Không secret/log rác/`console.*`/ghi file trong request
+- [ ] Migration (nếu có) sinh bằng Prisma, review được, không sửa SQL tay ẩu
+- [ ] Cập nhật tài liệu nếu đổi hợp đồng service
+
+### E4. Chống báo cáo ảo
+- Cấm nói "đã xong/đã test" mà không có output
+- Cấm "should work / có lẽ đúng". Chỉ khẳng định điều quan sát được
+- Test fail: xác định fail đó do mình hay có sẵn (`git stash` chạy đối chứng)
+- Nếu bị chặn: nói thẳng "chưa verify được vì X", không giả vờ xanh
+
+### E5. Không sửa chỗ này hỏng chỗ khác
+- Trước khi đổi/xóa symbol dùng chung: grep toàn repo, liệt kê nơi dùng trong PR
+- Đổi schema/enum/hợp đồng service: thông báo team, cập nhật mọi nơi tham chiếu trong cùng PR
+- Đổi trạng thái/tiền/kho: luôn trong transaction + lock; không tách thành nhiều request client điều phối
+- PR chạm > ~8 file hoặc > ~400 dòng: tách nhỏ hoặc giải trình rõ
+
+---
+
+## V. TEST & NGHIỆM THU TÀI CHÍNH (bắt buộc)
+
+1. Mỗi phase có **baseline tính tay** trên seed data — báo cáo phải khớp baseline, không so với output cũ
+2. Ma trận test tối thiểu:
+   - Thu/chi → số dư Account đổi đúng chiều + đúng số
+   - Thanh toán một phần/đủ → paymentStatus đúng, balanceDue≥0
+   - Hủy đơn đã thu tiền → hoàn tiền, số dư/tồn/công nợ về đúng
+   - Bán quá tồn → bị chặn
+   - Hoa hồng khi hủy đơn → trừ lại, không double
+   - Chuyển trạng thái sai luật → bị chặn
+
+---
+
+## VI. RUNBOOK KHI BẮT ĐẦU SESSION MỚI
+
+1. `git checkout main && git pull` — đảm bảo main mới nhất
+2. `npm install` — đảm bảo dependency đầy đủ
+3. `npx prisma generate` — đồng bộ Prisma client
+4. Đọc file này (`.clinerules`) để nạp lại ngữ cảnh & luật
+5. Tạo nhánh mới: `git checkout -b feat/P-X-task-name`
+6. Làm theo vòng đời task (Mục IV.E2)
