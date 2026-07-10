@@ -1,20 +1,20 @@
 import { z } from "zod";
 import {
   moneySchema,
-  nonEmptyString,
+  safeNonEmptyString,
   optionalPhone,
   optionalEmail,
 } from "@/lib/validations/common";
 
 export const createCustomerSchema = z.object({
-  name: nonEmptyString,
+  name: safeNonEmptyString, // XSS-safe
   phone: optionalPhone,
   email: optionalEmail,
   creditLimit: moneySchema.default("0"),
 });
 
 export const updateCustomerSchema = z.object({
-  name: nonEmptyString.optional(),
+  name: safeNonEmptyString.optional(), // XSS-safe
   phone: optionalPhone,
   email: optionalEmail,
   creditLimit: moneySchema.optional(),

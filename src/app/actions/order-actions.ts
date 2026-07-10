@@ -1,6 +1,8 @@
 "use server";
 
 import { auth } from "@/lib/auth";
+import { requirePermission } from "@/lib/authorize";
+import { auditLog } from "@/lib/audit";
 import { OrderOrchestrator } from "@/services/order-orchestrator.service";
 import { PaymentService } from "@/services/payment.service";
 import { TransactionService } from "@/services/transaction.service";
@@ -23,6 +25,7 @@ function parsePayment(data: FormData, prefix: string) {
 
 export async function createWarehouseOrder(formData: FormData) {
   const session = await auth();
+  await requirePermission(session?.user?.id, "order.create");
   const input: CreateSalesOrderInput = {
     customerId: formData.get("customerId") as string,
     warehouseId: (formData.get("warehouseId") as string) || undefined,
@@ -58,12 +61,14 @@ export async function createWarehouseOrder(formData: FormData) {
     revalidatePath("/orders");
     revalidatePath("/cashflow");
     revalidatePath("/debts");
+    await auditLog({ action: "CREATE_ORDER", entityType: "SalesOrder", entityId: so.id, userId: session?.user?.id, metadata: { orderCode: so.orderCode, type: "WAREHOUSE" } });
     return { id: so.id, orderCode: so.orderCode };
   });
 }
 
 export async function createDropshipOrder(formData: FormData) {
   const session = await auth();
+  await requirePermission(session?.user?.id, "order.create");
   const input: CreateDropshipOrderInput = {
     customerId: formData.get("customerId") as string,
     supplierId: formData.get("supplierId") as string,
@@ -119,29 +124,34 @@ export async function createDropshipOrder(formData: FormData) {
 }
 
 export async function deliverOrder(formData: FormData) {
-  await auth();
+  const session = await auth();
+  await requirePermission(session?.user?.id, "order.deliver");
   const id = formData.get("id") as string;
   return safeAction(async () => {
     await OrderOrchestrator.deliverSalesOrder(id);
     revalidatePath("/orders");
+    await auditLog({ action: "DELIVER_ORDER", entityType: "SalesOrder", entityId: id, userId: session?.user?.id });
     return { id };
   });
 }
 
 export async function cancelOrder(formData: FormData) {
-  await auth();
+  const session = await auth();
+  await requirePermission(session?.user?.id, "order.cancel");
   const id = formData.get("id") as string;
   const type = formData.get("type") as string;
   return safeAction(async () => {
     if (type === "SO") await OrderOrchestrator.cancelSalesOrder(id);
     else await OrderOrchestrator.cancelPurchaseOrder(id);
     revalidatePath("/orders");
+    await auditLog({ action: "CANCEL_ORDER", entityType: type === "SO" ? "SalesOrder" : "PurchaseOrder", entityId: id, userId: session?.user?.id });
     return { id };
   });
 }
 
 export async function recordPayment(formData: FormData) {
-  await auth();
+  const session = await auth();
+  await requirePermission(session?.user?.id, "debt.pay");
   return safeAction(async () => {
     const applications = JSON.parse(formData.get("applications") as string);
     await PaymentService.recordPayment({
@@ -164,6 +174,7 @@ interface OrderItemInput { productId?: string; productName: string; unit: string
 /** Unified order creation supporting 3 modes: DROPSHIP, WAREHOUSE, IMPORT */
 export async function createUnifiedOrder(formData: FormData) {
   const session = await auth();
+  await requirePermission(session?.user?.id, "order.create");
   const mode = formData.get("mode") as string;
   const items = JSON.parse(formData.get("items") as string) as OrderItemInput[];
 
@@ -241,7 +252,8 @@ export async function createUnifiedOrder(formData: FormData) {
 }
 
 export async function recordTransaction(formData: FormData) {
-  await auth();
+  const session = await auth();
+  await requirePermission(session?.user?.id, "cashflow.create");
   return safeAction(async () => {
     await TransactionService.recordTransactionInTransaction({
       type: formData.get("type") as "INCOME" | "EXPENSE",

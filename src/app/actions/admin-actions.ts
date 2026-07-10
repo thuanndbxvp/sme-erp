@@ -1,14 +1,20 @@
 "use server";
 
 import { auth } from "@/lib/auth";
+import { requirePermission } from "@/lib/authorize";
 import { prisma } from "@/lib/prisma";
 import { safeAction } from "@/lib/action-result";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 
+async function checkAdmin(session: { user?: { id?: string | null } } | null) {
+  await requirePermission(session?.user?.id, "system.admin");
+}
+
 // === USER ===
 export async function createUser(formData: FormData) {
-  await auth();
+  const session = await auth();
+  await checkAdmin(session);
   return safeAction(async () => {
     const u = await prisma.user.create({
       data: {
@@ -25,7 +31,8 @@ export async function createUser(formData: FormData) {
 }
 
 export async function updateUser(formData: FormData) {
-  await auth();
+  const session = await auth();
+  await checkAdmin(session);
   return safeAction(async () => {
     const id = formData.get("id") as string;
     const data: Record<string, unknown> = {};
@@ -42,7 +49,8 @@ export async function updateUser(formData: FormData) {
 
 // === ROLE ===
 export async function createRole(formData: FormData) {
-  await auth();
+  const session = await auth();
+  await checkAdmin(session);
   return safeAction(async () => {
     const permIds = formData.getAll("permissionIds") as string[];
     const r = await prisma.role.create({
@@ -57,7 +65,8 @@ export async function createRole(formData: FormData) {
 }
 
 export async function updateRolePermissions(formData: FormData) {
-  await auth();
+  const session = await auth();
+  await checkAdmin(session);
   return safeAction(async () => {
     const roleId = formData.get("roleId") as string;
     const permIds = formData.getAll("permissionIds") as string[];

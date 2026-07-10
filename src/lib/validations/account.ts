@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { nonEmptyString } from "@/lib/validations/common";
+import { nonEmptyString, safeNonEmptyString } from "@/lib/validations/common";
 
 /**
  * Account (quỹ tiền). balance = NGUỒN SỰ THẬT số dư, CHỈ đổi qua Transaction (C2/C3).
@@ -8,12 +8,12 @@ import { nonEmptyString } from "@/lib/validations/common";
  */
 export const createAccountSchema = z.object({
   code: nonEmptyString,
-  name: nonEmptyString,
+  name: safeNonEmptyString, // XSS-safe
 });
 
 // KHÔNG cho đổi code (định danh ổn định, gắn với Transaction).
 export const updateAccountSchema = z.object({
-  name: nonEmptyString.optional(),
+  name: safeNonEmptyString.optional(), // XSS-safe
 });
 
 export type CreateAccountInput = z.infer<typeof createAccountSchema>;

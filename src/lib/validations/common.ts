@@ -1,9 +1,42 @@
 import { z } from "zod";
+import sanitizeHtml from "sanitize-html";
 import { Money } from "@/domain/money";
 
 /**
  * Schema zod dùng chung. Input mọi action/route PHẢI qua zod (Mục A).
  */
+
+/**
+ * Chuỗi an toàn XSS — strip MỌI thẻ HTML trước khi đưa vào Database.
+ * Chống XSS: người dùng nhập <script>...</script> vào note/description sẽ bị
+ * làm sạch thành text thuần. Dùng sanitize-html (allowedTags: [] = cấm hết tag).
+ *
+ * Quan trọng: trim() phải gọi TRƯỚC transform() vì ZodEffects không có .trim().
+ */
+export const safeString = z
+  .string()
+  .trim()
+  .transform((val) =>
+    sanitizeHtml(val, { allowedTags: [], allowedAttributes: {} }),
+  );
+
+/** Chuỗi an toàn XSS, bắt buộc, trim, không rỗng. */
+export const safeNonEmptyString = z
+  .string()
+  .trim()
+  .transform((val) =>
+    sanitizeHtml(val, { allowedTags: [], allowedAttributes: {} }),
+  )
+  .refine((val) => val.length > 0, "Không được để trống");
+
+/** Chuỗi an toàn XSS, tùy chọn (null/undefined → undefined). */
+export const optionalSafeString = z
+  .string()
+  .trim()
+  .transform((val) =>
+    sanitizeHtml(val, { allowedTags: [], allowedAttributes: {} }),
+  )
+  .optional();
 
 /**
  * Tiền: nhận string hoặc number, validate hữu hạn + không âm, chuẩn hóa qua Money

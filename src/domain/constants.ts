@@ -28,6 +28,7 @@ export const REFERENCE_TYPE = {
   PURCHASE_ORDER: "PURCHASE_ORDER",
   SALES_ORDER: "SALES_ORDER",
   ADJUSTMENT: "ADJUSTMENT",
+  SYSTEM_INIT: "SYSTEM_INIT", // Khởi tạo số dư đầu kỳ (Opening Balances)
 } as const;
 export type ReferenceType = (typeof REFERENCE_TYPE)[keyof typeof REFERENCE_TYPE];
 

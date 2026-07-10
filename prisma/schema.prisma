@@ -318,6 +318,7 @@ model Transaction {
 
   @@index([accountId])
   @@index([date])
+  @@index([type, cashFlowGroup, date])
 }
 
 // ===== CÔNG NỢ & THANH TOÁN =====

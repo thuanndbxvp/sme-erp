@@ -6,6 +6,9 @@ const config = {
   testMatch: ["**/__tests__/**/*.test.ts", "**/?(*.)+(spec|test).ts"],
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
+    // sanitize-html dùng htmlparser2 (ESM) gây lỗi Jest. Mock pass-through
+    // — test validation logic Zod, không test bản thân sanitize-html.
+    "^sanitize-html$": "<rootDir>/src/__mocks__/sanitize-html.js",
   },
   clearMocks: true,
   collectCoverageFrom: ["src/**/*.ts", "!src/**/*.d.ts"],

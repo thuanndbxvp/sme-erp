@@ -1,14 +1,14 @@
 import { z } from "zod";
-import { nonEmptyString, optionalPhone, optionalEmail } from "@/lib/validations/common";
+import { safeNonEmptyString, optionalPhone, optionalEmail } from "@/lib/validations/common";
 
 export const createSupplierSchema = z.object({
-  name: nonEmptyString,
+  name: safeNonEmptyString, // XSS-safe
   phone: optionalPhone,
   email: optionalEmail,
 });
 
 export const updateSupplierSchema = z.object({
-  name: nonEmptyString.optional(),
+  name: safeNonEmptyString.optional(), // XSS-safe
   phone: optionalPhone,
   email: optionalEmail,
 });
