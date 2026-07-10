@@ -23,6 +23,9 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+  payouts              Payout[]
+  employeeTransactions EmployeeTransaction[]
+
   @@index([roleId])
 }
 
@@ -83,6 +86,7 @@ model Customer {
   updatedAt   DateTime @updatedAt
 
   salesOrders SalesOrder[]
+  invoices    Invoice[]
 }
 
 model Supplier {
@@ -95,6 +99,7 @@ model Supplier {
   updatedAt DateTime @updatedAt
 
   purchaseOrders PurchaseOrder[]
+  invoices       Invoice[]
 }
 
 model Warehouse {
@@ -120,6 +125,7 @@ model Account {
   updatedAt DateTime      @updatedAt
 
   transactions Transaction[]
+  payments     Payment[]
 }
 
 // ===== KHO =====
@@ -212,6 +218,7 @@ model SalesOrder {
   customer  Customer         @relation(fields: [customerId], references: [id])
   warehouse Warehouse?       @relation(fields: [warehouseId], references: [id])
   items     SalesOrderItem[]
+  invoice   Invoice?         // 1:1 ngược (FK nằm ở Invoice)
 
   @@index([status])
   @@index([customerId, status])
@@ -253,6 +260,7 @@ model PurchaseOrder {
 
   supplier Supplier            @relation(fields: [supplierId], references: [id])
   items    PurchaseOrderItem[]
+  invoice  Invoice?         // 1:1 ngược (FK nằm ở Invoice)
 
   @@index([status])
   @@index([supplierId, status])
@@ -311,6 +319,126 @@ model Transaction {
   @@index([accountId])
   @@index([date])
 }
+
+// ===== CÔNG NỢ & THANH TOÁN =====
+enum InvoiceType {
+  AR // Accounts Receivable — phải thu khách
+  AP // Accounts Payable — phải trả NCC
+}
+
+enum InvoiceStatus {
+  OPEN
+  PARTIAL
+  PAID
+  CANCELLED
+}
+
+// Công nợ — NGUỒN SỰ THẬT. balanceDue = totalAmount - paidAmount, luôn >= 0.
+// Order.paymentStatus DERIVE từ Invoice (không set tay, không lưu song song).
+model Invoice {
+  id              String        @id @default(cuid())
+  invoiceNumber   String        @unique
+  type            InvoiceType
+  status          InvoiceStatus @default(OPEN)
+  customerId      String?
+  supplierId      String?
+  salesOrderId    String?       @unique
+  purchaseOrderId String?       @unique
+  totalAmount     Decimal       @db.Decimal(15, 2)
+  paidAmount      Decimal       @default(0) @db.Decimal(15, 2)
+  balanceDue      Decimal       @db.Decimal(15, 2)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  payments       PaymentApplication[]
+  customer       Customer?       @relation(fields: [customerId], references: [id])
+  supplier       Supplier?       @relation(fields: [supplierId], references: [id])
+  salesOrder     SalesOrder?     @relation(fields: [salesOrderId], references: [id])
+  purchaseOrder  PurchaseOrder?  @relation(fields: [purchaseOrderId], references: [id])
+
+  @@index([customerId])
+  @@index([supplierId])
+}
+
+// Chiều thanh toán: IN = thu (AR), OUT = chi (AP).
+model Payment {
+  id          String   @id @default(cuid())
+  direction   String   // IN | OUT
+  amount      Decimal  @db.Decimal(15, 2)
+  accountId   String
+  customerId  String?
+  supplierId  String?
+  date        DateTime @default(now())
+  description String?
+  createdAt   DateTime @default(now())
+
+  account      Account              @relation(fields: [accountId], references: [id])
+  applications PaymentApplication[]
+
+  @@index([accountId])
+  @@index([date])
+}
+
+// Áp thanh toán vào nhiều hóa đơn (N-N).
+model PaymentApplication {
+  id            String  @id @default(cuid())
+  paymentId     String
+  invoiceId     String
+  appliedAmount Decimal @db.Decimal(15, 2)
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([paymentId])
+  @@index([invoiceId])
+}
+
+// ===== HOA HỒNG & NHÂN VIÊN =====
+model CommissionRule {
+  id            String  @id @default(cuid())
+  name          String
+  type          String  // PERCENTAGE | FIXED_PER_ITEM
+  value         Decimal @db.Decimal(15, 2)
+  productId     String?
+  minOrderValue Decimal @default(0) @db.Decimal(15, 2)
+  isActive      Boolean @default(true)
+  createdAt     DateTime @default(now())
+}
+
+// Payout theo nhân viên + tháng. Idempotent: @@unique([userId, periodMonth, periodYear])
+// bắt P2002 nếu generate 2 lần. Hủy đơn sau payout phải trừ lại commission.
+model Payout {
+  id           String  @id @default(cuid())
+  userId       String
+  periodMonth  Int     // 1-12
+  periodYear   Int
+  commission   Decimal @db.Decimal(15, 2)
+  orderCount   Int     @default(0)
+  status       String  @default("PENDING") // PENDING | PAID
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, periodMonth, periodYear])
+}
+
+// Tạm ứng / hoàn ứng / hoa hồng chi trả. Quỹ nhân viên = Σ ADVANCE - Σ REFUND.
+model EmployeeTransaction {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // ADVANCE | REFUND | COMMISSION_PAYOUT
+  amount      Decimal  @db.Decimal(15, 2)
+  description String?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+// Thêm back-relation vào User
+// model User already exists — add below via separate edit
 
 // ===== HẠ TẦNG =====
 // Outbox pattern cho side-effect bất đồng bộ (FOR UPDATE SKIP LOCKED + backoff).

@@ -141,4 +141,45 @@ export class InventoryService {
   ) {
     return prisma.$transaction((tx) => InventoryService.recordMovement(tx, input));
   }
+
+  /**
+   * Ghi movement ảo (DROPSHIP_OUT) — không đụng WarehouseInventory.
+   * Dùng cho đơn dropship giao hàng: chỉ ghi nhận COGS, không có tồn kho vật lý.
+   * Idempotent theo (referenceType, referenceId, reason).
+   */
+  static async recordVirtualMovement(tx: TxClient, input: RecordMovementInput) {
+    if (!Number.isInteger(input.quantity) || input.quantity <= 0) {
+      throw new ValidationError("Số lượng phải là số nguyên dương");
+    }
+
+    const existing = await tx.inventoryMovement.findUnique({
+      where: {
+        referenceType_referenceId_reason: {
+          referenceType: input.referenceType,
+          referenceId: input.referenceId,
+          reason: input.reason,
+        },
+      },
+    });
+    if (existing) {
+      return existing;
+    }
+
+    const unitCost = Money.of(input.unitCost);
+    const totalCost = unitCost.mul(input.quantity);
+
+    return tx.inventoryMovement.create({
+      data: {
+        type: input.type,
+        reason: input.reason,
+        productId: input.productId,
+        warehouseId: null, // virtual — không kho nào giữ
+        quantity: input.quantity,
+        unitCost: unitCost.toDecimalString(),
+        totalCost: totalCost.toDecimalString(),
+        referenceType: input.referenceType,
+        referenceId: input.referenceId,
+      },
+    });
+  }
 }

@@ -1,0 +1,85 @@
+"use server";
+
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { safeAction } from "@/lib/action-result";
+import { revalidatePath } from "next/cache";
+import bcrypt from "bcryptjs";
+
+// === USER ===
+export async function createUser(formData: FormData) {
+  await auth();
+  return safeAction(async () => {
+    const u = await prisma.user.create({
+      data: {
+        email: formData.get("email") as string,
+        name: formData.get("name") as string,
+        passwordHash: await bcrypt.hash(formData.get("password") as string, 10),
+        roleId: (formData.get("roleId") as string) || null,
+        isActive: true,
+      },
+    });
+    revalidatePath("/users");
+    return { id: u.id };
+  });
+}
+
+export async function updateUser(formData: FormData) {
+  await auth();
+  return safeAction(async () => {
+    const id = formData.get("id") as string;
+    const data: Record<string, unknown> = {};
+    const name = formData.get("name") as string; if (name) data.name = name;
+    const email = formData.get("email") as string; if (email) data.email = email;
+    const roleId = formData.get("roleId") as string; data.roleId = roleId || null;
+    const isActive = formData.get("isActive"); if (isActive !== null) data.isActive = isActive === "true";
+    const pw = formData.get("password") as string; if (pw) data.passwordHash = await bcrypt.hash(pw, 10);
+    await prisma.user.update({ where: { id }, data });
+    revalidatePath("/users");
+    return { id };
+  });
+}
+
+// === ROLE ===
+export async function createRole(formData: FormData) {
+  await auth();
+  return safeAction(async () => {
+    const permIds = formData.getAll("permissionIds") as string[];
+    const r = await prisma.role.create({
+      data: {
+        name: formData.get("name") as string,
+        permissions: { create: permIds.map(pid => ({ permissionId: pid })) },
+      },
+    });
+    revalidatePath("/roles");
+    return { id: r.id };
+  });
+}
+
+export async function updateRolePermissions(formData: FormData) {
+  await auth();
+  return safeAction(async () => {
+    const roleId = formData.get("roleId") as string;
+    const permIds = formData.getAll("permissionIds") as string[];
+    await prisma.rolePermission.deleteMany({ where: { roleId } });
+    await prisma.rolePermission.createMany({ data: permIds.map(pid => ({ roleId, permissionId: pid })) });
+    revalidatePath("/roles");
+    return { id: roleId };
+  });
+}
+
+// === TRANSACTION CATEGORY ===
+export async function createTransactionCategory(formData: FormData) {
+  await auth();
+  return safeAction(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (prisma as any).$executeRawUnsafe(
+      `INSERT INTO "TransactionCategory" ("id", "name", "type", "parentId") VALUES (gen_random_uuid(), $1, $2, $3)`,
+      formData.get("name") as string,
+      (formData.get("type") as string) || "EXPENSE",
+      (formData.get("parentId") as string) || null,
+    );
+    revalidatePath("/transaction-categories");
+    return { ok: true };
+  });
+}

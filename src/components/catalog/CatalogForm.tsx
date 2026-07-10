@@ -4,29 +4,25 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { FieldConfig } from "@/domain/catalog-registry";
 import type { ActionResult } from "@/lib/action-result";
+import { Button } from "@/components/ui/Button";
+import { ArrowLeftIcon } from "@/components/ui/icons";
 
 interface Props {
   entity: string;
   labelPlural: string;
   fields: FieldConfig[];
   mode: "create" | "edit";
-  /** Giá trị hiện tại khi edit (chuỗi). */
   initial?: Record<string, string>;
   action: (formData: FormData) => Promise<ActionResult<{ id: string }>>;
 }
 
-/**
- * Form danh mục generic (client). Gọi server action, hiển thị lỗi field/chung.
- * Khi edit: field createOnly bị khóa (readonly) — sku/code không đổi.
- */
 export function CatalogForm({ entity, labelPlural, fields, mode, initial, action }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const editableFields =
-    mode === "edit" ? fields.filter((f) => !f.createOnly) : fields;
+  const editableFields = mode === "edit" ? fields.filter((f) => !f.createOnly) : fields;
 
   function onSubmit(formData: FormData) {
     setError(null);
@@ -44,34 +40,135 @@ export function CatalogForm({ entity, labelPlural, fields, mode, initial, action
   }
 
   return (
-    <form action={onSubmit} style={{ maxWidth: 480, display: "grid", gap: 12 }}>
-      <h1>
-        {mode === "create" ? "Thêm" : "Sửa"} {labelPlural}
-      </h1>
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
-      {editableFields.map((f) => (
-        <label key={f.name} style={{ display: "grid", gap: 4 }}>
-          <span>{f.label}</span>
-          <input
-            name={f.name}
-            type={f.type === "money" ? "number" : "text"}
-            step={f.type === "money" ? "0.01" : undefined}
-            defaultValue={initial?.[f.name] ?? ""}
-            aria-invalid={fieldErrors[f.name] ? true : undefined}
-          />
-          {fieldErrors[f.name] && (
-            <span style={{ color: "crimson", fontSize: 12 }}>{fieldErrors[f.name]}</span>
-          )}
-        </label>
-      ))}
-      <div style={{ display: "flex", gap: 8 }}>
-        <button type="submit" disabled={pending}>
-          {pending ? "Đang lưu..." : "Lưu"}
+    <div style={{ maxWidth: 560 }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
+        <button
+          type="button"
+          onClick={() => router.push(`/catalog/${entity}`)}
+          style={{
+            background: "var(--color-surface)",
+            border: "1px solid var(--color-border-strong)",
+            borderRadius: "var(--radius-md)",
+            width: 36,
+            height: 36,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            color: "var(--color-foreground-muted)",
+          }}
+          aria-label="Quay lại"
+        >
+          <ArrowLeftIcon size={18} />
         </button>
-        <button type="button" onClick={() => router.push(`/catalog/${entity}`)}>
-          Hủy
-        </button>
+        <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, margin: 0 }}>
+          {mode === "create" ? "Thêm" : "Sửa"} {labelPlural}
+        </h1>
       </div>
-    </form>
+
+      {/* Error summary */}
+      {error && (
+        <div style={{ padding: "var(--space-3) var(--space-4)", background: "var(--color-destructive-bg)", color: "var(--color-destructive)", borderRadius: "var(--radius-md)", fontSize: "var(--text-sm)", marginBottom: "var(--space-4)", border: "1px solid var(--color-destructive)" }}>
+          {error}
+        </div>
+      )}
+
+      {/* Form */}
+      <form
+        action={onSubmit}
+        style={{
+          background: "var(--color-surface)",
+          border: "1px solid var(--color-border)",
+          borderRadius: "var(--radius-lg)",
+          padding: "var(--space-6)",
+          boxShadow: "var(--shadow-sm)",
+        }}
+      >
+        <div style={{ display: "grid", gap: "var(--space-5)" }}>
+          {editableFields.map((f) => (
+            <FormField key={f.name} field={f} initial={initial} error={fieldErrors[f.name]} />
+          ))}
+        </div>
+
+        <div style={{ display: "flex", gap: "var(--space-3)", marginTop: "var(--space-6)" }}>
+          <Button type="submit" variant="primary" disabled={pending}>
+            {pending ? "Đang lưu..." : mode === "create" ? "Tạo mới" : "Lưu thay đổi"}
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => router.push(`/catalog/${entity}`)}>
+            Hủy
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function FormField({
+  field,
+  initial,
+  error,
+}: {
+  field: FieldConfig;
+  initial?: Record<string, string>;
+  error?: string;
+}) {
+  const id = `field-${field.name}`;
+  const isMoney = field.type === "money";
+
+  return (
+    <div>
+      <label
+        htmlFor={id}
+        style={{
+          display: "block",
+          fontSize: "var(--text-sm)",
+          fontWeight: 600,
+          color: "var(--color-foreground)",
+          marginBottom: "var(--space-1)",
+        }}
+      >
+        {field.label}
+        {field.createOnly && (
+          <span style={{ color: "var(--color-foreground-subtle)", fontWeight: 400, marginLeft: "var(--space-2)", fontSize: "var(--text-xs)" }}>
+            (chỉ nhập khi tạo)
+          </span>
+        )}
+      </label>
+      <input
+        id={id}
+        name={field.name}
+        type={isMoney ? "number" : "text"}
+        step={isMoney ? "0.01" : undefined}
+        defaultValue={initial?.[field.name] ?? ""}
+        readOnly={field.createOnly}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${id}-error` : undefined}
+        style={{
+          width: "100%",
+          height: "var(--touch-target)",
+          padding: "0 var(--space-3)",
+          border: `1px solid ${error ? "var(--color-destructive)" : "var(--color-border-strong)"}`,
+          borderRadius: "var(--radius-md)",
+          fontSize: "var(--text-base)",
+          fontFamily: "var(--font-sans)",
+          background: field.createOnly ? "var(--color-muted)" : "var(--color-surface)",
+          color: "var(--color-foreground)",
+          outline: "none",
+          transition: "border-color 150ms",
+        }}
+        onFocus={(e) => {
+          if (!error) e.currentTarget.style.borderColor = "var(--color-primary)";
+        }}
+        onBlur={(e) => {
+          if (!error) e.currentTarget.style.borderColor = "var(--color-border-strong)";
+        }}
+      />
+      {error && (
+        <div id={`${id}-error`} role="alert" style={{ color: "var(--color-destructive)", fontSize: "var(--text-xs)", marginTop: "var(--space-1)" }}>
+          {error}
+        </div>
+      )}
+    </div>
   );
 }

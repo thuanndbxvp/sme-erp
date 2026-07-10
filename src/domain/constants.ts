@@ -72,3 +72,24 @@ export const CASH_FLOW_GROUP = {
   FINANCING: "FINANCING",
 } as const;
 export type CashFlowGroupValue = (typeof CASH_FLOW_GROUP)[keyof typeof CASH_FLOW_GROUP];
+
+// ===== CÔNG NỢ =====
+export const INVOICE_TYPE = {
+  AR: "AR",
+  AP: "AP",
+} as const;
+export type InvoiceTypeValue = (typeof INVOICE_TYPE)[keyof typeof INVOICE_TYPE];
+
+export const INVOICE_STATUS = {
+  OPEN: "OPEN",
+  PARTIAL: "PARTIAL",
+  PAID: "PAID",
+  CANCELLED: "CANCELLED",
+} as const;
+export type InvoiceStatusValue = (typeof INVOICE_STATUS)[keyof typeof INVOICE_STATUS];
+
+export const PAYMENT_DIRECTION = {
+  IN: "IN", // thu
+  OUT: "OUT", // chi
+} as const;
+export type PaymentDirectionValue = (typeof PAYMENT_DIRECTION)[keyof typeof PAYMENT_DIRECTION];
