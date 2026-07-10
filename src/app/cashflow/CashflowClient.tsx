@@ -56,7 +56,17 @@ export default function CashflowClient({ accounts, transactions }: { accounts: a
       )}
 
       {/* Summary Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
+        {/* Total Summary Card */}
+        <div style={{ background: "var(--color-primary)20", border: "1px solid var(--color-primary)", borderRadius: "var(--radius-lg)", padding: "var(--space-4)" }}>
+          <div style={{ fontWeight: 700, fontSize: "var(--text-sm)", marginBottom: "var(--space-2)", color: "var(--color-primary)" }}>TỔNG TẤT CẢ QUỸ TIỀN</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-2)", fontSize: "var(--text-xs)" }}>
+            <div><span style={{ color: "var(--color-foreground-subtle)" }}>Tổng Thu</span><br /><span style={{ color: "var(--color-success)", fontWeight: 600 }}>{summary.reduce((s: number, a: any) => s + a.income, 0).toLocaleString("vi-VN")}</span></div>
+            <div><span style={{ color: "var(--color-foreground-subtle)" }}>Tổng Chi</span><br /><span style={{ color: "var(--color-destructive)", fontWeight: 600 }}>{summary.reduce((s: number, a: any) => s + a.expense, 0).toLocaleString("vi-VN")}</span></div>
+            <div><span style={{ color: "var(--color-foreground-subtle)" }}>Tổng Số Dư</span><br /><span style={{ fontWeight: 800, color: "var(--color-primary)" }}>{summary.reduce((s: number, a: any) => s + Number(a.balance), 0).toLocaleString("vi-VN")}</span></div>
+          </div>
+        </div>
+
         {summary.map((a: any) => (
           <div key={a.id} style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "var(--space-4)" }}>
             <div style={{ fontWeight: 600, fontSize: "var(--text-sm)", marginBottom: "var(--space-2)" }}>{a.code} — {a.name}</div>
