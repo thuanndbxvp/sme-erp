@@ -64,8 +64,8 @@ function isPublicPath(pathname: string): boolean {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. Rate Limit cho API Login (chống Brute-force)
-  if (pathname === "/api/auth/callback/credentials") {
+  // 1. Rate Limit cho API Login & API Quick Add (chống Brute-force & Spam)
+  if (pathname === "/api/auth/callback/credentials" || pathname === "/api/quick-add") {
     const limiter = getRatelimiter();
     if (limiter) {
       const ip =
@@ -75,7 +75,7 @@ export async function middleware(request: NextRequest) {
       const { success } = await limiter.limit(ip);
       if (!success) {
         return new NextResponse(
-          "Too Many Requests. Tài khoản tạm khóa do thử quá nhiều lần.",
+          "Too Many Requests. Vui lòng thử lại sau.",
           { status: 429 },
         );
       }
