@@ -111,13 +111,15 @@ model Warehouse {
 
 // Quỹ tiền mặt / ngân hàng. balance = NGUỒN SỰ THẬT số dư tiền.
 model Account {
-  id        String   @id @default(cuid())
-  code      String   @unique
+  id        String        @id @default(cuid())
+  code      String        @unique
   name      String
-  balance   Decimal  @default(0) @db.Decimal(15, 2)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  balance   Decimal       @default(0) @db.Decimal(15, 2)
+  isActive  Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  transactions Transaction[]
 }
 
 // ===== KHO =====
@@ -286,6 +288,28 @@ model OrderStatusHistory {
   createdAt     DateTime @default(now())
 
   @@index([referenceType, referenceId])
+}
+
+// ===== TIỀN & CÔNG NỢ =====
+// Transaction: ghi nhận thu/chi cập nhật balance atomic (C2).
+// cashFlowGroup = OPERATIONAL | INVESTING | FINANCING
+model Transaction {
+  id              String   @id @default(cuid())
+  date            DateTime @default(now())
+  type            String   // INCOME | EXPENSE
+  amount          Decimal  @db.Decimal(15, 2)
+  accountId       String
+  cashFlowGroup   String   @default("OPERATIONAL")
+  customerId      String?
+  supplierId      String?
+  salesOrderId    String?
+  purchaseOrderId String?
+  description     String?
+
+  account Account @relation(fields: [accountId], references: [id])
+
+  @@index([accountId])
+  @@index([date])
 }
 
 // ===== HẠ TẦNG =====

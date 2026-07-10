@@ -58,3 +58,17 @@ export const PAYMENT_STATUS = {
   PAID: "PAID",
 } as const;
 export type PaymentStatusValue = (typeof PAYMENT_STATUS)[keyof typeof PAYMENT_STATUS];
+
+// ===== TIỀN & CÔNG NỢ =====
+export const TRANSACTION_TYPE = {
+  INCOME: "INCOME",
+  EXPENSE: "EXPENSE",
+} as const;
+export type TransactionTypeValue = (typeof TRANSACTION_TYPE)[keyof typeof TRANSACTION_TYPE];
+
+export const CASH_FLOW_GROUP = {
+  OPERATIONAL: "OPERATIONAL",
+  INVESTING: "INVESTING",
+  FINANCING: "FINANCING",
+} as const;
+export type CashFlowGroupValue = (typeof CASH_FLOW_GROUP)[keyof typeof CASH_FLOW_GROUP];
