@@ -229,6 +229,113 @@ async function main() {
     }
   }
 
+  // 2.5 Import PurchaseOrders & Invoices
+  if (data.PurchaseOrder && data.PurchaseOrder.length > 0) {
+    console.log(`Đang import ${data.PurchaseOrder.length} PurchaseOrders và tạo Invoice...`);
+    
+    // Gom nhóm items theo purchaseOrderId
+    const pItemsByOrder: Record<string, any[]> = {};
+    if (data.PurchaseOrderItem) {
+      for (const item of data.PurchaseOrderItem) {
+        (pItemsByOrder[item.purchaseOrderId] ??= []).push(item);
+      }
+    }
+
+    for (const po of data.PurchaseOrder) {
+      // Map status V2 sang SME
+      let status = "ORDERED";
+      if (po.status === "COMPLETED" || po.status === "RECEIVED") status = "RECEIVED";
+      if (po.status === "CANCELLED") status = "CANCELLED";
+
+      const totalAmt = Number(po.totalAmount || 0);
+      const paidAmt = Number(po.paidAmount || 0);
+      const balanceDue = Math.max(0, totalAmt - paidAmt);
+      
+      let paymentStatus = "UNPAID";
+      if (paidAmt > 0 && balanceDue <= 0) paymentStatus = "PAID";
+      else if (paidAmt > 0 && balanceDue > 0) paymentStatus = "PARTIAL";
+
+      const items = pItemsByOrder[po.id] || [];
+
+      // Kiểm tra Order đã có chưa
+      const existingOrder = await prisma.purchaseOrder.findUnique({ where: { id: po.id } });
+      if (existingOrder) continue;
+
+      await prisma.$transaction(async (tx) => {
+        // Tạo PurchaseOrder
+        const newPo = await tx.purchaseOrder.create({
+          data: {
+            id: po.id,
+            orderCode: po.orderCode,
+            status: status as any,
+            paymentStatus: paymentStatus as any,
+            supplierId: po.supplierId,
+            warehouseId: po.warehouseId,
+            userId: po.userId,
+            orderDate: po.orderDate ? new Date(po.orderDate) : null,
+            receivedDate: po.receivedDate ? new Date(po.receivedDate) : null,
+            totalAmount: totalAmt.toString(),
+            taxAmount: po.taxAmount || "0",
+            createdAt: new Date(po.createdAt),
+            items: {
+              create: items.map((it: any) => ({
+                id: it.id,
+                productId: it.productId,
+                productName: it.productName,
+                unit: it.unit || "Cái",
+                qty: it.qty,
+                buyPrice: it.buyPrice || "0",
+                buyTotal: it.buyTotal || "0",
+                taxAmount: it.taxAmount || "0",
+              }))
+            }
+          }
+        });
+
+        // Tạo Invoice cho Order này
+        let invStatus = "OPEN";
+        if (balanceDue <= 0) invStatus = "PAID";
+        else if (paidAmt > 0) invStatus = "PARTIAL";
+        
+        const invoice = await tx.invoice.create({
+          data: {
+            invoiceNumber: `PINV-${newPo.orderCode}`,
+            type: "AP",
+            status: invStatus as any,
+            supplierId: newPo.supplierId,
+            purchaseOrderId: newPo.id,
+            totalAmount: totalAmt.toString(),
+            paidAmount: paidAmt.toString(),
+            balanceDue: balanceDue.toString(),
+          }
+        });
+
+        // Nếu có trả tiền, sinh Payment & PaymentApplication
+        if (paidAmt > 0) {
+          const firstAccount = await tx.account.findFirst();
+          if (firstAccount) {
+            await tx.payment.create({
+              data: {
+                direction: "OUT",
+                amount: paidAmt.toString(),
+                accountId: firstAccount.id,
+                supplierId: newPo.supplierId,
+                description: `Import tự động: Thanh toán cho ${newPo.orderCode}`,
+                date: newPo.receivedDate || newPo.orderDate || new Date(),
+                applications: {
+                  create: [{
+                    invoiceId: invoice.id,
+                    appliedAmount: paidAmt.toString()
+                  }]
+                }
+              }
+            });
+          }
+        }
+      });
+    }
+  }
+
   // 3. Import Transactions (Thu chi tự do)
   if (data.Transaction && data.Transaction.length > 0) {
     console.log(`Đang import ${data.Transaction.length} Transactions...`);
