@@ -44,10 +44,11 @@ export class InventoryService {
     // Idempotent: đã có movement cùng (reference, reason) → trả về, không side-effect lại.
     const existing = await tx.inventoryMovement.findUnique({
       where: {
-        referenceType_referenceId_reason: {
+        referenceType_referenceId_reason_productId: {
           referenceType: input.referenceType,
           referenceId: input.referenceId,
           reason: input.reason,
+          productId: input.productId,
         },
       },
     });

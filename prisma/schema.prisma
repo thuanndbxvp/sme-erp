@@ -160,8 +160,8 @@ model InventoryMovement {
 
   @@index([productId])
   @@index([referenceType, referenceId])
-  // Idempotent: 1 (reference, reason) chỉ sinh 1 movement.
-  @@unique([referenceType, referenceId, reason])
+  // Idempotent: 1 (reference, reason, product) chỉ sinh 1 movement.
+  @@unique([referenceType, referenceId, reason, productId])
 }
 
 // ===== ĐƠN HÀNG =====

@@ -95,9 +95,9 @@ export class OutboxService {
     );
   }
 
-  /** Đánh dấu xử lý xong. */
-  static async markDone(prisma: PrismaClient, id: string) {
-    return prisma.outboxEvent.update({
+  /** Đánh dấu xử lý xong. Accepts transaction client for atomicity. */
+  static async markDone(tx: TxClient, id: string) {
+    return tx.outboxEvent.update({
       where: { id },
       data: { status: "DONE", lockedUntil: null, nextRetryAt: null },
     });
