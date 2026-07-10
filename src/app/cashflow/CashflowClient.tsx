@@ -56,24 +56,30 @@ export default function CashflowClient({ accounts, transactions }: { accounts: a
       )}
 
       {/* Summary Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
         {/* Total Summary Card */}
-        <div style={{ background: "var(--color-primary)20", border: "1px solid var(--color-primary)", borderRadius: "var(--radius-lg)", padding: "var(--space-4)" }}>
-          <div style={{ fontWeight: 700, fontSize: "var(--text-sm)", marginBottom: "var(--space-2)", color: "var(--color-primary)" }}>TỔNG TẤT CẢ QUỸ TIỀN</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-2)", fontSize: "var(--text-xs)" }}>
-            <div><span style={{ color: "var(--color-foreground-subtle)" }}>Tổng Thu</span><br /><span style={{ color: "var(--color-success)", fontWeight: 600 }}>{summary.reduce((s: number, a: any) => s + a.income, 0).toLocaleString("vi-VN")}</span></div>
-            <div><span style={{ color: "var(--color-foreground-subtle)" }}>Tổng Chi</span><br /><span style={{ color: "var(--color-destructive)", fontWeight: 600 }}>{summary.reduce((s: number, a: any) => s + a.expense, 0).toLocaleString("vi-VN")}</span></div>
-            <div><span style={{ color: "var(--color-foreground-subtle)" }}>Tổng Số Dư</span><br /><span style={{ fontWeight: 800, color: "var(--color-primary)" }}>{summary.reduce((s: number, a: any) => s + Number(a.balance), 0).toLocaleString("vi-VN")}</span></div>
+        <div style={{ background: "var(--color-primary)15", border: "2px solid var(--color-primary)", borderRadius: "var(--radius-lg)", padding: "var(--space-4)", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+          <div style={{ fontWeight: 800, fontSize: "var(--text-base)", marginBottom: "var(--space-3)", color: "var(--color-primary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>TỔNG TẤT CẢ QUỸ TIỀN</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-2)", fontSize: "var(--text-sm)", marginBottom: "var(--space-3)" }}>
+            <div><span style={{ color: "var(--color-foreground-subtle)", fontSize: "var(--text-xs)" }}>Tổng Thu</span><br /><span style={{ color: "var(--color-success)", fontWeight: 600 }}>{summary.reduce((s: number, a: any) => s + a.income, 0).toLocaleString("vi-VN")}</span></div>
+            <div><span style={{ color: "var(--color-foreground-subtle)", fontSize: "var(--text-xs)" }}>Tổng Chi</span><br /><span style={{ color: "var(--color-destructive)", fontWeight: 600 }}>{summary.reduce((s: number, a: any) => s + a.expense, 0).toLocaleString("vi-VN")}</span></div>
+          </div>
+          <div style={{ borderTop: "1px solid var(--color-primary)40", paddingTop: "var(--space-2)", marginTop: "auto" }}>
+            <span style={{ color: "var(--color-primary)", fontSize: "var(--text-xs)", fontWeight: 600, textTransform: "uppercase" }}>Tổng Số Dư</span><br />
+            <span style={{ fontWeight: 800, color: "var(--color-primary)", fontSize: "var(--text-2xl)" }}>{summary.reduce((s: number, a: any) => s + Number(a.balance), 0).toLocaleString("vi-VN")} đ</span>
           </div>
         </div>
 
         {summary.map((a: any) => (
-          <div key={a.id} style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "var(--space-4)" }}>
-            <div style={{ fontWeight: 600, fontSize: "var(--text-sm)", marginBottom: "var(--space-2)" }}>{a.code} — {a.name}</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-2)", fontSize: "var(--text-xs)" }}>
-              <div><span style={{ color: "var(--color-foreground-subtle)" }}>Thu</span><br /><span style={{ color: "var(--color-success)", fontWeight: 600 }}>{a.income.toLocaleString("vi-VN")}</span></div>
-              <div><span style={{ color: "var(--color-foreground-subtle)" }}>Chi</span><br /><span style={{ color: "var(--color-destructive)", fontWeight: 600 }}>{a.expense.toLocaleString("vi-VN")}</span></div>
-              <div><span style={{ color: "var(--color-foreground-subtle)" }}>Số dư</span><br /><span style={{ fontWeight: 700 }}>{Number(a.balance).toLocaleString("vi-VN")}</span></div>
+          <div key={a.id} style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "var(--space-4)", display: "flex", flexDirection: "column", justifyContent: "space-between", boxShadow: "var(--shadow-sm)" }}>
+            <div style={{ fontWeight: 700, fontSize: "var(--text-base)", marginBottom: "var(--space-3)", color: "var(--color-foreground)" }}>{a.code} — {a.name}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-2)", fontSize: "var(--text-sm)", marginBottom: "var(--space-3)" }}>
+              <div><span style={{ color: "var(--color-foreground-subtle)", fontSize: "var(--text-xs)" }}>Thu</span><br /><span style={{ color: "var(--color-success)", fontWeight: 600 }}>{a.income.toLocaleString("vi-VN")}</span></div>
+              <div><span style={{ color: "var(--color-foreground-subtle)", fontSize: "var(--text-xs)" }}>Chi</span><br /><span style={{ color: "var(--color-destructive)", fontWeight: 600 }}>{a.expense.toLocaleString("vi-VN")}</span></div>
+            </div>
+            <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: "var(--space-2)", marginTop: "auto" }}>
+              <span style={{ color: "var(--color-foreground-subtle)", fontSize: "var(--text-xs)", fontWeight: 600, textTransform: "uppercase" }}>Số dư hiện tại</span><br />
+              <span style={{ fontWeight: 800, fontSize: "var(--text-xl)", color: "var(--color-foreground)" }}>{Number(a.balance).toLocaleString("vi-VN")} đ</span>
             </div>
           </div>
         ))}
