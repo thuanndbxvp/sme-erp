@@ -81,7 +81,7 @@ describe("safeAction (P1-1b)", () => {
 
 describe("catalog registry (P1-1b)", () => {
   it("có đủ 5 entity", () => {
-    expect(CATALOG_ENTITIES).toHaveLength(5);
+    expect(CATALOG_ENTITIES).toHaveLength(4);
   });
 
   it("isCatalogEntity phân biệt hợp lệ / rác", () => {
@@ -100,19 +100,11 @@ describe("catalog registry (P1-1b)", () => {
     }
   });
 
-  it("account KHÔNG có field balance (không sửa số dư qua danh mục)", () => {
-    const names = CATALOG_REGISTRY.account.fields.map((f) => f.name);
-    expect(names).not.toContain("balance");
-  });
-
-  it("product/warehouse/account có field createOnly (sku/code không đổi)", () => {
-    expect(CATALOG_REGISTRY.product.fields.find((f) => f.name === "sku")?.createOnly).toBe(
+  it("product/warehouse có field createOnly (sku/code không đổi)", () => {
+    expect(CATALOG_REGISTRY.product.fields.find((f: { name: string }) => f.name === "sku")?.createOnly).toBe(
       true,
     );
-    expect(CATALOG_REGISTRY.warehouse.fields.find((f) => f.name === "code")?.createOnly).toBe(
-      true,
-    );
-    expect(CATALOG_REGISTRY.account.fields.find((f) => f.name === "code")?.createOnly).toBe(
+    expect(CATALOG_REGISTRY.warehouse.fields.find((f: { name: string }) => f.name === "code")?.createOnly).toBe(
       true,
     );
   });

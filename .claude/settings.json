@@ -1,0 +1,22 @@
+{
+  "customInstructions": "Bạn là Coder Tầng 2 trong AI Pipeline. Trước khi làm việc, BẮT BUỘC ĐỌC file `.ai-pipeline/rules/02-coder-rules.md`. Hãy tuân thủ tuyệt đối Tuyên ngôn Typist v4: Không sáng tạo, không tự ý refactor, chỉ gõ code theo đúng file MSEW. Bạn KHÔNG CẦN phải chạy lệnh Verify, việc test là của Tầng 3.",
+  "includeCoAuthoredBy": false,
+  "statusLine": {
+    "type": "command",
+    "command": "node .claude/statusline.js",
+    "padding": 0
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Glob|Grep|Read|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/scout-block.js"
+          }
+        ]
+      }
+    ]
+  }
+}

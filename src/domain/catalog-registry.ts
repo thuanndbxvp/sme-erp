@@ -4,7 +4,6 @@ import { ProductService } from "@/services/product.service";
 import { CustomerService } from "@/services/customer.service";
 import { SupplierService } from "@/services/supplier.service";
 import { WarehouseService } from "@/services/warehouse.service";
-import { AccountService } from "@/services/account.service";
 import {
   createProductSchema,
   updateProductSchema,
@@ -21,11 +20,6 @@ import {
   createWarehouseSchema,
   updateWarehouseSchema,
 } from "@/lib/validations/warehouse";
-import {
-  createAccountSchema,
-  updateAccountSchema,
-} from "@/lib/validations/account";
-
 /**
  * Registry danh mục — 1 nguồn cấu hình cho actions + UI của cả 5 entity.
  * Mỗi entity khai báo: nhãn, permission code, zod schema, service, field hiển thị.
@@ -37,7 +31,6 @@ export const CATALOG_ENTITIES = [
   "customer",
   "supplier",
   "warehouse",
-  "account",
 ] as const;
 export type CatalogEntity = (typeof CATALOG_ENTITIES)[number];
 
@@ -155,17 +148,5 @@ export const CATALOG_REGISTRY: Record<CatalogEntity, CatalogConfig> = {
     updateSchema: updateWarehouseSchema,
     service: WarehouseService as unknown as CatalogService,
     fields: [TEXT("code", "Mã kho", { createOnly: true }), TEXT("name", "Tên")],
-  },
-  account: {
-    entity: "account",
-    label: "Tài khoản tiền",
-    labelPlural: "Tài khoản tiền",
-    permissionRead: "account.read",
-    permissionWrite: "account.write",
-    createSchema: createAccountSchema,
-    updateSchema: updateAccountSchema,
-    service: AccountService as unknown as CatalogService,
-    // balance KHÔNG có ở đây — chỉ đổi qua Transaction (C2/C3).
-    fields: [TEXT("code", "Mã", { createOnly: true }), TEXT("name", "Tên")],
   },
 };
