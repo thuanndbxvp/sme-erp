@@ -3,9 +3,74 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
+
+interface MenuItem {
+  icon: string;
+  label: string;
+  href: string;
+  active: boolean;
+  allowedRoles: string[];
+}
+
+interface MenuGroup {
+  title: string;
+  items: MenuItem[];
+}
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const userRole = (session?.user as { role?: string } | undefined)?.role || "GUEST";
+
+  const ALL_ROLES = ["ADMIN", "SALE", "ACCOUNTANT"];
+  const ADMIN_ACC = ["ADMIN", "ACCOUNTANT"];
+  const ADMIN_ONLY = ["ADMIN"];
+
+  const MENU: MenuGroup[] = [
+    {
+      title: "Kinh doanh",
+      items: [
+        { icon: "📋", label: "Đơn hàng", href: "/orders", active: pathname.startsWith("/orders"), allowedRoles: ALL_ROLES },
+      ],
+    },
+    {
+      title: "Tài chính",
+      items: [
+        { icon: "💵", label: "Sổ quỹ / Tài chính", href: "/cashflow", active: pathname.startsWith("/cashflow"), allowedRoles: ADMIN_ACC },
+        { icon: "📊", label: "Công nợ", href: "/debts", active: pathname.startsWith("/debts"), allowedRoles: ADMIN_ACC },
+      ],
+    },
+    {
+      title: "Kho hàng",
+      items: [
+        { icon: "📦", label: "Sản phẩm & Tồn kho", href: "/catalog/product", active: pathname.startsWith("/catalog/product") || pathname.startsWith("/products/"), allowedRoles: ALL_ROLES },
+        { icon: "🏗️", label: "Quản lý kho", href: "/catalog/warehouse", active: pathname.startsWith("/catalog/warehouse"), allowedRoles: ALL_ROLES },
+      ],
+    },
+    {
+      title: "Đối tác",
+      items: [
+        { icon: "👥", label: "Khách hàng", href: "/catalog/customer", active: pathname.startsWith("/catalog/customer") || pathname.startsWith("/customers/"), allowedRoles: ALL_ROLES },
+        { icon: "🏭", label: "Nhà cung cấp", href: "/catalog/supplier", active: pathname.startsWith("/catalog/supplier") || pathname.startsWith("/suppliers/"), allowedRoles: ALL_ROLES },
+      ],
+    },
+    {
+      title: "Báo cáo",
+      items: [
+        { icon: "📈", label: "Báo cáo tổng quan", href: "/reports", active: pathname.startsWith("/reports"), allowedRoles: ADMIN_ONLY },
+      ],
+    },
+    {
+      title: "Hệ thống",
+      items: [
+        { icon: "👤", label: "Người dùng", href: "/users", active: pathname.startsWith("/users"), allowedRoles: ADMIN_ONLY },
+        { icon: "🔐", label: "Phân quyền", href: "/roles", active: pathname.startsWith("/roles"), allowedRoles: ADMIN_ONLY },
+        { icon: "📜", label: "Nhật ký", href: "/audit", active: pathname.startsWith("/audit"), allowedRoles: ADMIN_ONLY },
+        { icon: "⚙️", label: "Hồ sơ cá nhân", href: "/profile", active: pathname.startsWith("/profile"), allowedRoles: ALL_ROLES },
+      ],
+    },
+  ];
 
   return (
     <aside style={{ position: "fixed", top: 0, left: 0, bottom: 0, width: "var(--sidebar-width)", background: "var(--color-sidebar-bg)", color: "var(--color-sidebar-fg)", display: "flex", flexDirection: "column", overflowY: "auto", zIndex: 40 }}>
@@ -19,48 +84,25 @@ export function Sidebar() {
       </div>
 
       <nav style={{ padding: "var(--space-3)", flex: 1 }}>
-        {/* 1. KINH DOANH */}
-        <SectionLabel label="Kinh doanh" />
-        <NavItem href="/orders" icon="📋" label="Đơn hàng" active={pathname.startsWith("/orders")} />
-
-        {/* 2. TÀI CHÍNH */}
-        <div style={{ marginTop: "var(--space-3)" }}>
-          <SectionLabel label="Tài chính" />
-          <NavItem href="/cashflow" icon="💵" label="Sổ quỹ / Tài chính" active={pathname.startsWith("/cashflow")} />
-          <NavItem href="/debts" icon="📊" label="Công nợ" active={pathname.startsWith("/debts")} />
-        </div>
-
-        {/* 3. KHO HÀNG */}
-        <div style={{ marginTop: "var(--space-3)" }}>
-          <SectionLabel label="Kho hàng" />
-          <NavItem href="/catalog/product" icon="📦" label="Sản phẩm & Tồn kho" active={pathname.startsWith("/catalog/product") || pathname.startsWith("/products/")} />
-          <NavItem href="/catalog/warehouse" icon="🏗️" label="Quản lý kho" active={pathname.startsWith("/catalog/warehouse")} />
-        </div>
-
-        {/* 4. ĐỐI TÁC */}
-        <div style={{ marginTop: "var(--space-3)" }}>
-          <SectionLabel label="Đối tác" />
-          <NavItem href="/catalog/customer" icon="👥" label="Khách hàng" active={pathname.startsWith("/catalog/customer") || pathname.startsWith("/customers/")} />
-          <NavItem href="/catalog/supplier" icon="🏭" label="Nhà cung cấp" active={pathname.startsWith("/catalog/supplier") || pathname.startsWith("/suppliers/")} />
-        </div>
-
-        {/* 5. BÁO CÁO */}
-        <div style={{ marginTop: "var(--space-3)" }}>
-          <SectionLabel label="Báo cáo" />
-          <NavItem href="/reports" icon="📈" label="Báo cáo tổng quan" active={pathname.startsWith("/reports")} />
-        </div>
-
-        {/* 6. HỆ THỐNG */}
-        <div style={{ marginTop: "var(--space-3)" }}>
-          <SectionLabel label="Hệ thống" />
-          <NavItem href="/users" icon="👤" label="Người dùng" active={pathname.startsWith("/users")} />
-          <NavItem href="/roles" icon="🔐" label="Phân quyền" active={pathname.startsWith("/roles")} />
-          <NavItem href="/audit" icon="📜" label="Nhật ký" active={pathname.startsWith("/audit")} />
-          <NavItem href="/profile" icon="⚙️" label="Hồ sơ cá nhân" active={pathname.startsWith("/profile")} />
-        </div>
+        {MENU.map((group) => {
+          const visibleItems = group.items.filter((item) => item.allowedRoles.includes(userRole));
+          if (visibleItems.length === 0) return null;
+          return (
+            <div key={group.title} style={{ marginTop: "var(--space-3)" }}>
+              <SectionLabel label={group.title} />
+              {visibleItems.map((item) => (
+                <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label} active={item.active} />
+              ))}
+            </div>
+          );
+        })}
       </nav>
 
-      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid rgba(255,255,255,0.08)", fontSize: "11px", color: "var(--color-foreground-subtle)" }}>SME ERP v0.1</div>
+      {/* User profile footer */}
+      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid rgba(255,255,255,0.08)", background: "rgba(0,0,0,0.15)" }}>
+        <p style={{ fontSize: "var(--text-sm)", fontWeight: 600, margin: 0, color: "white" }}>{session?.user?.name || "Người dùng"}</p>
+        <p style={{ fontSize: "11px", color: "var(--color-foreground-subtle)", margin: 0 }}>{userRole}</p>
+      </div>
     </aside>
   );
 }
