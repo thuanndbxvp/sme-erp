@@ -112,7 +112,15 @@ async function main() {
       const existing = await prisma.product.findFirst({ where: { OR: [{ id: prod.id }, { sku }] } });
       if (!existing) {
         await prisma.product.create({
-          data: { id: prod.id, sku, name: prod.name, unit: prod.unit || "Cái", sellPrice: prod.sellPrice || "0", isActive: prod.isActive ?? true }
+          data: { 
+            id: prod.id, 
+            sku, 
+            name: prod.name, 
+            unit: prod.baseUnit || prod.unit || "Cái", 
+            buyPrice: prod.buyPrice ? String(prod.buyPrice) : "0",
+            sellPrice: prod.sellPrice || "0", 
+            isActive: prod.isActive ?? true 
+          }
         });
       }
     }
