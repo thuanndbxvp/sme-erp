@@ -2,6 +2,7 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma as defaultPrisma } from "@/lib/prisma";
 import { Money } from "@/domain/money";
 import { ValidationError, NotFoundError } from "@/domain/errors";
+import { AuditAndSecurityHelper } from "@/lib/audit";
 import {
   TRANSACTION_TYPE,
   type TransactionTypeValue,
@@ -54,6 +55,9 @@ export class TransactionService {
     tx: TxClient,
     input: RecordTransactionInput,
   ) {
+    // [SECURITY] Chặn sửa/tạo giao dịch vào kỳ đã khóa sổ
+    await AuditAndSecurityHelper.assertNotPeriodLocked(new Date());
+
     if (input.amount === "0" || Number(input.amount) <= 0) {
       throw new ValidationError("Số tiền phải lớn hơn 0");
     }
@@ -96,6 +100,12 @@ export class TransactionService {
     });
 
     // Ghi dòng Transaction.
+    AuditAndSecurityHelper.logAction({
+      action: "CREATE",
+      entityType: "TRANSACTION",
+      entityId: "new", // Vì create chưa có ID, hoặc lưu lại response
+      metadata: { type: input.type, amount: input.amount, accountId: input.accountId }
+    });
     return tx.transaction.create({
       data: {
         type: input.type,

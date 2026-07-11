@@ -470,3 +470,9 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([userId])
 }
+
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}

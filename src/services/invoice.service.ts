@@ -2,6 +2,7 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma as defaultPrisma } from "@/lib/prisma";
 import { Money } from "@/domain/money";
 import { NotFoundError, ValidationError } from "@/domain/errors";
+import { AuditAndSecurityHelper } from "@/lib/audit";
 import { INVOICE_TYPE, INVOICE_STATUS } from "@/domain/constants";
 import type { InvoiceStatusValue } from "@/domain/constants";
 
@@ -24,6 +25,8 @@ export class InvoiceService {
     so: { id: string; customerId: string; totalAmount: string },
     meta: { now?: Date; random?: number } = {},
   ) {
+    // [SECURITY] Chặn sửa/tạo hóa đơn vào kỳ đã khóa sổ
+    await AuditAndSecurityHelper.assertNotPeriodLocked(new Date());
     const now = meta.now ?? new Date();
     return tx.invoice.create({
       data: {
@@ -45,6 +48,8 @@ export class InvoiceService {
     po: { id: string; supplierId: string; totalAmount: string },
     meta: { now?: Date; random?: number } = {},
   ) {
+    // [SECURITY] Chặn sửa/tạo hóa đơn vào kỳ đã khóa sổ
+    await AuditAndSecurityHelper.assertNotPeriodLocked(new Date());
     const now = meta.now ?? new Date();
     return tx.invoice.create({
       data: {
