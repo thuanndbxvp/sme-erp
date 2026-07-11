@@ -114,8 +114,9 @@ export default function CashflowClient({ accounts, transactions, categories }: {
 
       {/* Transaction List */}
       <div style={{ background: "var(--color-surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", overflow: "hidden", boxShadow: "var(--shadow-sm)" }}>
+        <div style={{ maxHeight: "calc(100vh - 400px)", overflowY: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)", fontVariantNumeric: "tabular-nums" }}>
-          <thead><tr style={{ borderBottom: "1px solid var(--color-border)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--color-foreground-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          <thead style={{ position: "sticky", top: 0, zIndex: 1, background: "var(--color-surface)" }}><tr style={{ borderBottom: "1px solid var(--color-border)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--color-foreground-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>Ngày</th>
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>Loại</th>
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>TK</th>
@@ -135,6 +136,7 @@ export default function CashflowClient({ accounts, transactions, categories }: {
               ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

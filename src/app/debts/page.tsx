@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import AgingView from "@/components/debts/AgingView";
+import PaymentForm from "@/components/debts/PaymentForm";
 
 export const dynamic = "force-dynamic";
 
@@ -48,26 +49,21 @@ function calcAging(invoices: Array<{
 }
 
 export default async function DebtsPage() {
-  const [arInvoices, apInvoices] = await Promise.all([
-    prisma.invoice.findMany({
-      where: { type: "AR", status: { not: "CANCELLED" }, balanceDue: { gt: "0" } },
-      include: { customer: { select: { id: true, name: true } }, salesOrder: { select: { orderCode: true } } },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.invoice.findMany({
-      where: { type: "AP", status: { not: "CANCELLED" }, balanceDue: { gt: "0" } },
-      include: { supplier: { select: { id: true, name: true } }, purchaseOrder: { select: { orderCode: true } } },
-      orderBy: { createdAt: "desc" },
-    }),
+  const [accounts, arInvoicesRaw, apInvoicesRaw] = await Promise.all([
+    prisma.account.findMany({ where: { isActive: true }, orderBy: { code: "asc" } }),
+    prisma.invoice.findMany({ where: { type: "AR", status: { not: "CANCELLED" }, balanceDue: { gt: "0" } }, include: { customer: { select: { id: true, name: true } }, salesOrder: { select: { orderCode: true } } }, orderBy: { createdAt: "desc" } }),
+    prisma.invoice.findMany({ where: { type: "AP", status: { not: "CANCELLED" }, balanceDue: { gt: "0" } }, include: { supplier: { select: { id: true, name: true } }, purchaseOrder: { select: { orderCode: true } } }, orderBy: { createdAt: "desc" } }),
   ]);
 
-  const arData = calcAging(arInvoices, "AR");
-  const apData = calcAging(apInvoices, "AP");
+  const arData = calcAging(arInvoicesRaw, "AR");
+  const apData = calcAging(apInvoicesRaw, "AP");
 
   const totalAR = arData.reduce((s, r) => s + r.totalDue, 0);
   const totalAP = apData.reduce((s, r) => s + r.totalDue, 0);
   const overdueAR = arData.reduce((s, r) => s + r.d1_30 + r.d31_60 + r.d61_90 + r.over90, 0);
   const overdueAP = apData.reduce((s, r) => s + r.d1_30 + r.d31_60 + r.d61_90 + r.over90, 0);
+  const arCount = arInvoicesRaw.length;
+  const apCount = apInvoicesRaw.length;
 
   return (
     <div>
@@ -81,17 +77,24 @@ export default async function DebtsPage() {
         <div style={{ background: "var(--color-success-bg)", border: "1px solid var(--color-success)", borderRadius: "var(--radius-lg)", padding: "var(--space-5)" }}>
           <div style={{ fontWeight: 600, color: "var(--color-success)", fontSize: "var(--text-base)" }}>Phải thu khách hàng</div>
           <div style={{ fontSize: "var(--text-2xl)", fontWeight: 700, marginTop: "var(--space-2)" }}>{totalAR.toLocaleString("vi-VN")} đ</div>
-          <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", marginTop: "var(--space-1)" }}>{arInvoices.length} hóa đơn · {arData.length} khách hàng · Quá hạn: {overdueAR.toLocaleString("vi-VN")} đ</div>
+          <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", marginTop: "var(--space-1)" }}>{arCount} hóa đơn · {arData.length} khách hàng · Quá hạn: {overdueAR.toLocaleString("vi-VN")} đ</div>
         </div>
         <div style={{ background: "var(--color-warning-bg)", border: "1px solid var(--color-warning)", borderRadius: "var(--radius-lg)", padding: "var(--space-5)" }}>
           <div style={{ fontWeight: 600, color: "var(--color-warning)", fontSize: "var(--text-base)" }}>Phải trả nhà cung cấp</div>
           <div style={{ fontSize: "var(--text-2xl)", fontWeight: 700, marginTop: "var(--space-2)" }}>{totalAP.toLocaleString("vi-VN")} đ</div>
-          <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", marginTop: "var(--space-1)" }}>{apInvoices.length} hóa đơn · {apData.length} nhà cung cấp · Quá hạn: {overdueAP.toLocaleString("vi-VN")} đ</div>
+          <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", marginTop: "var(--space-1)" }}>{apCount} hóa đơn · {apData.length} nhà cung cấp · Quá hạn: {overdueAP.toLocaleString("vi-VN")} đ</div>
         </div>
       </div>
 
       {/* Aging View */}
       <AgingView arData={arData} apData={apData} />
+
+      {/* Payment Recording */}
+      <PaymentForm
+        accounts={JSON.parse(JSON.stringify(accounts))}
+        arInvoices={JSON.parse(JSON.stringify(arInvoicesRaw))}
+        apInvoices={JSON.parse(JSON.stringify(apInvoicesRaw))}
+      />
     </div>
   );
 }

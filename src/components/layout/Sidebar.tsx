@@ -28,8 +28,7 @@ export function Sidebar() {
           <SectionLabel label="Tài chính" />
           <NavItem href="/cashflow" icon="💵" label="Sổ quỹ" active={pathname.startsWith("/cashflow")} />
           <NavItem href="/debts" icon="📊" label="Công nợ" active={pathname.startsWith("/debts")} />
-          <NavItem href="/catalog/account" icon="🏦" label="Tài khoản tiền" active={pathname.startsWith("/catalog/account")} />
-          <NavItem href="/transaction-categories" icon="🏷️" label="Phân loại dòng tiền" active={pathname.startsWith("/transaction-categories")} />
+          <NavItem href="/finance" icon="🏦" label="Tài khoản & Phân loại" active={pathname.startsWith("/finance") || pathname.startsWith("/catalog/account") || pathname.startsWith("/transaction-categories")} />
         </div>
 
         {/* 3. KHO HÀNG */}
