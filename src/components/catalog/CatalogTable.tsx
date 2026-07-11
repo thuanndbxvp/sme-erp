@@ -61,15 +61,23 @@ export function CatalogTable({ entity, labelPlural, fields, rows, deactivate }: 
         emptyMessage={`Chưa có ${labelPlural.toLowerCase()} nào`}
         actions={(row) => {
           const id = row.id ?? "";
+          const detailHref = (entity === "customer") ? `/customers/${id}` : (entity === "supplier") ? `/suppliers/${id}` : (entity === "product") ? `/products/${id}` : null;
           return (
             <>
+              {detailHref && (
+                <Link href={detailHref}>
+                  <Button variant="ghost" size="sm" aria-label={`Xem ${id}`}>
+                    Xem
+                  </Button>
+                </Link>
+              )}
               <Link href={`/catalog/${entity}/${id}/edit`}>
                 <Button variant="ghost" size="sm" aria-label={`Sửa ${id}`}>
                   <EditIcon size={14} />
                 </Button>
               </Link>
-              <Button variant="ghost" size="sm" disabled={pending} onClick={() => onDeactivate(id)} aria-label={`Ngừng ${id}`}>
-                Ẩn
+              <Button variant="danger" size="sm" disabled={pending} onClick={() => onDeactivate(id)} aria-label={`Xóa ${id}`}>
+                Xóa
               </Button>
             </>
           );

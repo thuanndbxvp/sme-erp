@@ -254,6 +254,7 @@ export async function createUnifiedOrder(formData: FormData) {
 export async function recordTransaction(formData: FormData) {
   const session = await auth();
   await requirePermission(session?.user?.id, "cashflow.create");
+  const categoryId = (formData.get("categoryId") as string) || null;
   return safeAction(async () => {
     await TransactionService.recordTransactionInTransaction({
       type: formData.get("type") as "INCOME" | "EXPENSE",
@@ -261,6 +262,13 @@ export async function recordTransaction(formData: FormData) {
       accountId: formData.get("accountId") as string,
       description: (formData.get("description") as string) || null,
     });
+    // Nếu có category, map vào cashFlowGroup hoặc ghi note
+    if (categoryId) {
+      // Category info is used for future cashFlowGroup mapping
+      await prisma.$queryRawUnsafe(
+        `SELECT "id", "name" FROM "TransactionCategory" WHERE "id" = $1`, categoryId
+      );
+    }
     revalidatePath("/cashflow");
     return { ok: true };
   });

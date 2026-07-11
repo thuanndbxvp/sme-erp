@@ -77,6 +77,44 @@ export async function updateRolePermissions(formData: FormData) {
   });
 }
 
+export async function deactivateUser(formData: FormData) {
+  const session = await auth();
+  await checkAdmin(session);
+  return safeAction(async () => {
+    const id = formData.get("id") as string;
+    await prisma.user.update({ where: { id }, data: { isActive: false } });
+    revalidatePath("/users");
+    return { id };
+  });
+}
+
+export async function resetUserPassword(formData: FormData) {
+  const session = await auth();
+  await checkAdmin(session);
+  return safeAction(async () => {
+    const id = formData.get("id") as string;
+    const newPassword = formData.get("password") as string;
+    if (!newPassword || newPassword.length < 6) throw new Error("Mật khẩu phải ít nhất 6 ký tự");
+    await prisma.user.update({ where: { id }, data: { passwordHash: await bcrypt.hash(newPassword, 10) } });
+    revalidatePath("/users");
+    return { id };
+  });
+}
+
+export async function updateOwnProfile(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Chưa đăng nhập");
+  return safeAction(async () => {
+    const data: Record<string, unknown> = {};
+    const name = formData.get("name") as string; if (name) data.name = name;
+    const pw = formData.get("password") as string;
+    if (pw && pw.length >= 6) data.passwordHash = await bcrypt.hash(pw, 10);
+    await prisma.user.update({ where: { id: session.user!.id! }, data });
+    revalidatePath("/profile");
+    return { id: session.user!.id! };
+  });
+}
+
 // === TRANSACTION CATEGORY ===
 export async function createTransactionCategory(formData: FormData) {
   await auth();

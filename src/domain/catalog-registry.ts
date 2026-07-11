@@ -99,8 +99,8 @@ const MONEY = (name: string, label: string, opts: Partial<FieldConfig> = {}): Fi
 export const CATALOG_REGISTRY: Record<CatalogEntity, CatalogConfig> = {
   product: {
     entity: "product",
-    label: "Sản phẩm",
-    labelPlural: "Sản phẩm",
+    label: "Sản phẩm & Tồn kho",
+    labelPlural: "Sản phẩm & Tồn kho",
     permissionRead: "product.read",
     permissionWrite: "product.write",
     createSchema: createProductSchema,
