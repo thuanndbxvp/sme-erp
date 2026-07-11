@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CATALOG_ENTITIES, CATALOG_REGISTRY } from "@/domain/catalog-registry";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -20,30 +19,46 @@ export function Sidebar() {
       </div>
 
       <nav style={{ padding: "var(--space-3)", flex: 1 }}>
+        {/* 1. KINH DOANH */}
         <SectionLabel label="Kinh doanh" />
         <NavItem href="/orders" icon="📋" label="Đơn hàng" active={pathname.startsWith("/orders")} />
-        <NavItem href="/cashflow" icon="💵" label="Sổ quỹ" active={pathname.startsWith("/cashflow")} />
-        <NavItem href="/debts" icon="📊" label="Công nợ" active={pathname.startsWith("/debts")} />
 
-        <div style={{ marginTop: "var(--space-4)" }}>
-          <SectionLabel label="Danh mục" />
-          {CATALOG_ENTITIES.map((e) => (
-            <NavItem key={e} href={`/catalog/${e}`} icon={entityEmoji(e)} label={CATALOG_REGISTRY[e].labelPlural} active={pathname.startsWith(`/catalog/${e}`)} />
-          ))}
-          <NavItem href="/transaction-categories" icon="🏷️" label="Danh mục thu chi" active={pathname.startsWith("/transaction-categories")} />
+        {/* 2. TÀI CHÍNH */}
+        <div style={{ marginTop: "var(--space-3)" }}>
+          <SectionLabel label="Tài chính" />
+          <NavItem href="/cashflow" icon="💵" label="Sổ quỹ" active={pathname.startsWith("/cashflow")} />
+          <NavItem href="/debts" icon="📊" label="Công nợ" active={pathname.startsWith("/debts")} />
+          <NavItem href="/catalog/account" icon="🏦" label="Tài khoản tiền" active={pathname.startsWith("/catalog/account")} />
+          <NavItem href="/transaction-categories" icon="🏷️" label="Phân loại dòng tiền" active={pathname.startsWith("/transaction-categories")} />
         </div>
 
-        <div style={{ marginTop: "var(--space-4)" }}>
+        {/* 3. KHO HÀNG */}
+        <div style={{ marginTop: "var(--space-3)" }}>
+          <SectionLabel label="Kho hàng" />
+          <NavItem href="/catalog/product" icon="📦" label="Sản phẩm & Tồn kho" active={pathname.startsWith("/catalog/product") || pathname.startsWith("/products/")} />
+          <NavItem href="/catalog/warehouse" icon="🏗️" label="Quản lý kho" active={pathname.startsWith("/catalog/warehouse")} />
+        </div>
+
+        {/* 4. ĐỐI TÁC */}
+        <div style={{ marginTop: "var(--space-3)" }}>
+          <SectionLabel label="Đối tác" />
+          <NavItem href="/catalog/customer" icon="👥" label="Khách hàng" active={pathname.startsWith("/catalog/customer") || pathname.startsWith("/customers/")} />
+          <NavItem href="/catalog/supplier" icon="🏭" label="Nhà cung cấp" active={pathname.startsWith("/catalog/supplier") || pathname.startsWith("/suppliers/")} />
+        </div>
+
+        {/* 5. BÁO CÁO */}
+        <div style={{ marginTop: "var(--space-3)" }}>
           <SectionLabel label="Báo cáo" />
-          <NavItem href="/reports" icon="📈" label="Báo cáo" active={pathname.startsWith("/reports")} />
+          <NavItem href="/reports" icon="📈" label="Báo cáo tổng quan" active={pathname.startsWith("/reports")} />
         </div>
 
-        <div style={{ marginTop: "var(--space-4)" }}>
+        {/* 6. HỆ THỐNG */}
+        <div style={{ marginTop: "var(--space-3)" }}>
           <SectionLabel label="Hệ thống" />
-          <NavItem href="/audit" icon="📜" label="Nhật ký" active={pathname.startsWith("/audit")} />
-          <NavItem href="/users" icon="👥" label="Người dùng" active={pathname.startsWith("/users")} />
+          <NavItem href="/users" icon="👤" label="Người dùng" active={pathname.startsWith("/users")} />
           <NavItem href="/roles" icon="🔐" label="Phân quyền" active={pathname.startsWith("/roles")} />
-          <NavItem href="/profile" icon="👤" label="Hồ sơ" active={pathname.startsWith("/profile")} />
+          <NavItem href="/audit" icon="📜" label="Nhật ký" active={pathname.startsWith("/audit")} />
+          <NavItem href="/profile" icon="⚙️" label="Hồ sơ cá nhân" active={pathname.startsWith("/profile")} />
         </div>
       </nav>
 
@@ -53,7 +68,7 @@ export function Sidebar() {
 }
 
 function SectionLabel({ label }: { label: string }) {
-  return <div style={{ fontSize: "11px", fontWeight: 600, color: "var(--color-foreground-subtle)", padding: "var(--space-2) var(--space-3) var(--space-1)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</div>;
+  return <div style={{ fontSize: "11px", fontWeight: 600, color: "var(--color-foreground-subtle)", padding: "var(--space-1) var(--space-3)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</div>;
 }
 
 function NavItem({ href, icon, label, active }: { href: string; icon: string; label: string; active: boolean }) {
@@ -65,9 +80,4 @@ function NavItem({ href, icon, label, active }: { href: string; icon: string; la
       {label}
     </Link>
   );
-}
-
-function entityEmoji(e: string): string {
-  const m: Record<string, string> = { product: "📦", customer: "👥", supplier: "🏭", warehouse: "🏗", account: "💰" };
-  return m[e] ?? "•";
 }
