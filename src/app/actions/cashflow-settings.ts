@@ -1,7 +1,7 @@
 "use server";
 
-import { auth } from "@/auth";
-import { requirePermission } from "@/lib/auth/require-permission";
+import { auth } from "@/lib/auth";
+import { requirePermission } from "@/lib/authorize";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
