@@ -54,7 +54,7 @@ function CashflowTab({ accounts, transactions, categories, router }: { accounts:
 
   function onSubmit(fd: FormData) {
     setError(null);
-    startTransition(async () => { const r = await recordTransaction(fd); if (r.ok) { setShowForm(false); router.refresh(); } else setError(r.error); });
+    startTransition(async () => { const r = await recordTransaction(fd); if (r.ok) { setShowForm(false); router.refresh(); } else setError(r.error || "Có lỗi xảy ra"); });
   }
 
   const summary = accounts.map((a: any) => {
@@ -211,7 +211,7 @@ function AccountManager({ accounts, router }: { accounts: any[]; router: any }) 
         setMsg(editId ? "Đã cập nhật!" : "Đã thêm!");
         router.refresh();
       } else {
-        setMsg(r.error);
+        setMsg(r.error || "Có lỗi xảy ra");
       }
     });
   }
@@ -224,7 +224,7 @@ function AccountManager({ accounts, router }: { accounts: any[]; router: any }) 
         setMsg("Đã xóa!");
         router.refresh();
       } else {
-        setMsg(r.error);
+        setMsg(r.error || "Có lỗi xảy ra");
       }
     });
   }
@@ -330,7 +330,7 @@ function CategoryManager({ categories, router }: { categories: any[]; router: an
         setMsg(editId ? "Đã cập nhật!" : "Đã thêm!");
         router.refresh();
       } else {
-        setMsg(r.error);
+        setMsg(r.error || "Có lỗi xảy ra");
       }
     });
   }
@@ -343,7 +343,7 @@ function CategoryManager({ categories, router }: { categories: any[]; router: an
         setMsg("Đã xóa!");
         router.refresh();
       } else {
-        setMsg(r.error);
+        setMsg(r.error || "Có lỗi xảy ra");
       }
     });
   }
