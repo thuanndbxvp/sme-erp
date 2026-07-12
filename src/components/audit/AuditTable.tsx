@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-interface AuditLog { id: string; action: string; entityType: string; entityId: string; userId: string; createdAt: Date; }
+interface AuditLog { id: string; action: string; entityType: string; entityId: string; userId: string | null; createdAt: Date; }
 
 interface Props { logs: AuditLog[]; }
 
