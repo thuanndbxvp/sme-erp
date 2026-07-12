@@ -3,16 +3,17 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { recordTransaction } from "@/app/actions/order-actions";
-import { createTransactionCategory } from "@/app/actions/admin-actions";
+import { createAccount, updateAccount, deleteAccount, createCategory, updateCategory, deleteCategory } from "@/app/actions/cashflow-settings";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const S: React.CSSProperties = { width: "100%", height: 40, padding: "0 10px", border: "1px solid var(--color-border-strong)", borderRadius: "var(--radius-md)", fontSize: "var(--text-sm)", fontFamily: "var(--font-sans)", background: "var(--color-surface)" };
 const btn: React.CSSProperties = { height: 40, padding: "0 16px", borderRadius: "var(--radius-md)", fontSize: "var(--text-sm)", fontWeight: 600, cursor: "pointer", border: "none", background: "var(--color-primary)", color: "white" };
+const btnSm: React.CSSProperties = { height: 32, padding: "0 12px", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", fontWeight: 600, cursor: "pointer", border: "none" };
 
 export default function CashflowClient({ accounts, transactions, categories }: { accounts: any[]; transactions: any[]; categories: any[] }) {
   const router = useRouter();
-  const [tab, setTab] = useState<"cashflow" | "accounts" | "categories">("cashflow");
+  const [tab, setTab] = useState<"cashflow" | "settings">("cashflow");
 
   return (
     <div>
@@ -24,13 +25,11 @@ export default function CashflowClient({ accounts, transactions, categories }: {
       {/* Tabs */}
       <div style={{ display: "flex", gap: 0, marginBottom: "var(--space-5)", borderBottom: "2px solid var(--color-border)" }}>
         <TabBtn active={tab === "cashflow"} onClick={() => setTab("cashflow")} label="💵 Sổ quỹ" />
-        <TabBtn active={tab === "accounts"} onClick={() => setTab("accounts")} label="🏦 Tài khoản" />
-        <TabBtn active={tab === "categories"} onClick={() => setTab("categories")} label="🏷️ Phân loại" />
+        <TabBtn active={tab === "settings"} onClick={() => setTab("settings")} label="⚙️ Cấu hình" />
       </div>
 
       {tab === "cashflow" && <CashflowTab accounts={accounts} transactions={transactions} categories={categories} router={router} />}
-      {tab === "accounts" && <AccountsTab accounts={accounts} />}
-      {tab === "categories" && <CategoriesTab categories={categories} router={router} />}
+      {tab === "settings" && <SettingsTab accounts={accounts} categories={categories} router={router} />}
     </div>
   );
 }
@@ -65,65 +64,75 @@ function CashflowTab({ accounts, transactions, categories, router }: { accounts:
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--space-4)" }}>
-        <button onClick={() => setShowForm(!showForm)} style={btn}>+ Ghi nhận</button>
+      {/* Header Container */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "var(--space-4)", marginBottom: "var(--space-4)", flexWrap: "wrap" }}>
+        
+        {/* Summary */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-3)", flex: 1 }}>
+          <div style={{ background: "var(--color-primary)10", border: "2px solid var(--color-primary)", borderRadius: "var(--radius-lg)", padding: "var(--space-3)", minWidth: 220 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "var(--space-1)" }}>
+              <span style={{ fontWeight: 800, fontSize: "var(--text-sm)", color: "var(--color-primary)", textTransform: "uppercase" }}>TỔNG QUỸ</span>
+              <span style={{ fontWeight: 800, color: "var(--color-primary)", fontSize: "var(--text-lg)" }}>{totalBal.toLocaleString("vi-VN")} đ</span>
+            </div>
+            <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-subtle)" }}>
+              <span style={{ display: "inline-block", marginRight: "var(--space-3)" }}>Thu: <span style={{ color: "var(--color-success)", fontWeight: 600 }}>{totalInc.toLocaleString("vi-VN")}</span></span>
+              <span style={{ display: "inline-block" }}>Chi: <span style={{ color: "var(--color-destructive)", fontWeight: 600 }}>{totalExp.toLocaleString("vi-VN")}</span></span>
+            </div>
+          </div>
+          {summary.map((a: any) => (
+            <div key={a.id} style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "var(--space-3)", minWidth: 200 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "var(--space-1)", gap: "var(--space-3)" }}>
+                <span style={{ fontWeight: 700, fontSize: "var(--text-sm)" }}>{a.code}</span>
+                <span style={{ fontWeight: 700, fontSize: "var(--text-base)", color: Number(a.balance) >= 0 ? "var(--color-success)" : "var(--color-destructive)" }}>{Number(a.balance).toLocaleString("vi-VN")} đ</span>
+              </div>
+              <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-subtle)" }}>
+                <span style={{ display: "inline-block", marginRight: "var(--space-3)" }}>Thu: <span style={{ color: "var(--color-success)", fontWeight: 600 }}>{a.income.toLocaleString("vi-VN")}</span></span>
+                <span style={{ display: "inline-block" }}>Chi: <span style={{ color: "var(--color-destructive)", fontWeight: 600 }}>{a.expense.toLocaleString("vi-VN")}</span></span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button onClick={() => setShowForm(!showForm)} style={{...btn, whiteSpace: "nowrap"}}>+ Ghi nhận</button>
       </div>
 
       {showForm && (
-        <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "var(--space-5)", marginBottom: "var(--space-4)", maxWidth: 520 }}>
+        <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "var(--space-5)", marginBottom: "var(--space-4)" }}>
           {error && <div style={{ padding: "var(--space-2)", background: "var(--color-destructive-bg)", color: "var(--color-destructive)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", marginBottom: "var(--space-3)" }}>{error}</div>}
-          <form action={onSubmit} style={{ display: "grid", gap: "var(--space-3)" }}>
-            <div>
-              <label style={{ fontSize: "var(--text-xs)", fontWeight: 600, display: "block", marginBottom: 2 }}>Phân loại *</label>
-              <select name="categoryId" style={S} required>
-                <option value="">-- Chọn --</option>
-                {roots.map((r: any) => (
-                  <optgroup key={r.id} label={r.name}>
-                    <option value={r.id}>{r.name} (chung)</option>
-                    {children(r.id).map((c: any) => <option key={c.id} value={c.id}>  {c.name}</option>)}
-                  </optgroup>
-                ))}
-              </select>
+          <form action={onSubmit} style={{ display: "grid", gap: "var(--space-3)", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
+            <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+              <div>
+                <label style={{ fontSize: "var(--text-xs)", fontWeight: 600, display: "block", marginBottom: 2 }}>Phân loại *</label>
+                <select name="categoryId" style={S} required>
+                  <option value="">-- Chọn --</option>
+                  {roots.map((r: any) => (
+                    <optgroup key={r.id} label={r.name}>
+                      <option value={r.id}>{r.name} (chung)</option>
+                      {children(r.id).map((c: any) => <option key={c.id} value={c.id}>  {c.name}</option>)}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: "var(--text-xs)", fontWeight: 600, display: "block", marginBottom: 2 }}>Tài khoản *</label>
+                <select name="accountId" style={S}>{accounts.map((a: any) => <option key={a.id} value={a.id}>{a.code} ({(Number(a.balance)||0).toLocaleString("vi-VN")} đ)</option>)}</select>
+              </div>
             </div>
+            
             <select name="type" style={S}><option value="INCOME">Thu vào</option><option value="EXPENSE">Chi ra</option></select>
-            <input name="amount" type="number" step="0.01" placeholder="Số tiền" style={S} required />
-            <select name="accountId" style={S}>{accounts.map((a: any) => <option key={a.id} value={a.id}>{a.code} — {a.name} ({(Number(a.balance)||0).toLocaleString("vi-VN")} đ)</option>)}</select>
-            <input name="description" placeholder="Diễn giải" style={S} />
-            <div style={{ display: "flex", gap: "var(--space-3)" }}>
-              <button type="submit" disabled={pending} style={btn}>{pending ? "..." : "Ghi nhận"}</button>
+            <div style={{ position: "relative" }}>
+              <input name="amount" type="number" step="1" min="1" placeholder="Số tiền" style={{...S, paddingRight: 30}} required />
+              <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: "var(--text-sm)", color: "var(--color-foreground-muted)", pointerEvents: "none" }}>đ</span>
+            </div>
+            <input name="description" placeholder="Diễn giải" style={{...S, gridColumn: "1 / -1"}} />
+            
+            <div style={{ display: "flex", gap: "var(--space-3)", gridColumn: "1 / -1" }}>
+              <button type="submit" disabled={pending} style={btn}>{pending ? "..." : "Xác nhận Ghi nhận"}</button>
               <button type="button" onClick={() => setShowForm(false)} style={{ ...btn, background: "var(--color-surface)", color: "var(--color-foreground)", border: "1px solid var(--color-border-strong)" }}>Hủy</button>
             </div>
           </form>
         </div>
       )}
-
-      {/* Summary */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "var(--space-4)", marginBottom: "var(--space-5)" }}>
-        <div style={{ background: "var(--color-primary)10", border: "2px solid var(--color-primary)", borderRadius: "var(--radius-lg)", padding: "var(--space-4)" }}>
-          <div style={{ fontWeight: 800, fontSize: "var(--text-sm)", marginBottom: "var(--space-3)", color: "var(--color-primary)", textTransform: "uppercase" }}>TỔNG QUỸ</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-2)", fontSize: "var(--text-sm)", marginBottom: "var(--space-3)" }}>
-            <div><span style={{ color: "var(--color-foreground-subtle)", fontSize: "var(--text-xs)" }}>Thu</span><br /><span style={{ color: "var(--color-success)", fontWeight: 600 }}>{totalInc.toLocaleString("vi-VN")}</span></div>
-            <div><span style={{ color: "var(--color-foreground-subtle)", fontSize: "var(--text-xs)" }}>Chi</span><br /><span style={{ color: "var(--color-destructive)", fontWeight: 600 }}>{totalExp.toLocaleString("vi-VN")}</span></div>
-          </div>
-          <div style={{ borderTop: "1px solid var(--color-primary)30", paddingTop: "var(--space-2)" }}>
-            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-primary)", fontWeight: 600 }}>SỐ DƯ</span><br />
-            <span style={{ fontWeight: 800, color: "var(--color-primary)", fontSize: "var(--text-2xl)" }}>{totalBal.toLocaleString("vi-VN")} đ</span>
-          </div>
-        </div>
-        {summary.map((a: any) => (
-          <div key={a.id} style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "var(--space-4)" }}>
-            <div style={{ fontWeight: 700, fontSize: "var(--text-sm)", marginBottom: "var(--space-2)" }}>{a.code} — {a.name}</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-1)", fontSize: "var(--text-xs)" }}>
-              <div><span style={{ color: "var(--color-foreground-subtle)" }}>Thu</span><br /><span style={{ color: "var(--color-success)", fontWeight: 600 }}>{a.income.toLocaleString("vi-VN")}</span></div>
-              <div><span style={{ color: "var(--color-foreground-subtle)" }}>Chi</span><br /><span style={{ color: "var(--color-destructive)", fontWeight: 600 }}>{a.expense.toLocaleString("vi-VN")}</span></div>
-            </div>
-            <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: "var(--space-1)", marginTop: "var(--space-2)" }}>
-              <span style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-subtle)" }}>Số dư</span><br />
-              <span style={{ fontWeight: 700, fontSize: "var(--text-base)" }}>{Number(a.balance).toLocaleString("vi-VN")} đ</span>
-            </div>
-          </div>
-        ))}
-      </div>
 
       {/* Transaction list */}
       <div style={{ background: "var(--color-surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", overflow: "hidden", boxShadow: "var(--shadow-sm)" }}>
@@ -150,110 +159,254 @@ function CashflowTab({ accounts, transactions, categories, router }: { accounts:
   );
 }
 
-/* ====== TÀI KHOẢN TAB ====== */
-function AccountsTab({ accounts }: { accounts: any[] }) {
-  const totalBal = accounts.reduce((s: number, a: any) => s + Number(a.balance), 0);
+/* ====== CẤU HÌNH TAB ====== */
+function SettingsTab({ accounts, categories, router }: { accounts: any[]; categories: any[]; router: any }) {
   return (
-    <div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "var(--space-4)", marginBottom: "var(--space-5)" }}>
-        <div style={{ background: "var(--color-primary)10", border: "2px solid var(--color-primary)", borderRadius: "var(--radius-lg)", padding: "var(--space-4)" }}>
-          <div style={{ fontSize: "var(--text-xs)", color: "var(--color-primary)", fontWeight: 700, textTransform: "uppercase" }}>Tổng số dư</div>
-          <div style={{ fontSize: "var(--text-2xl)", fontWeight: 800, color: "var(--color-primary)", marginTop: "var(--space-1)" }}>{totalBal.toLocaleString("vi-VN")} đ</div>
-          <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", marginTop: 2 }}>{accounts.length} tài khoản</div>
-        </div>
-        {accounts.map((a: any) => (
-          <div key={a.id} style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "var(--space-4)" }}>
-            <div style={{ fontWeight: 700, fontSize: "var(--text-base)", marginBottom: "var(--space-1)" }}>{a.code} — {a.name}</div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "var(--space-2)" }}>
-              <span style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)" }}>Số dư</span>
-              <span style={{ fontWeight: 700, color: Number(a.balance) >= 0 ? "var(--color-success)" : "var(--color-destructive)" }}>{Number(a.balance).toLocaleString("vi-VN")} đ</span>
-            </div>
-            <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", marginTop: 2 }}>{a.isActive ? "✅ Hoạt động" : "⛔ Đã khóa"}</div>
-          </div>
-        ))}
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-5)" }}>
+      {/* Khu vực 1: Quản lý Quỹ */}
+      <AccountManager accounts={accounts} router={router} />
+      
+      {/* Khu vực 2: Quản lý Phân loại */}
+      <CategoryManager categories={categories} router={router} />
+    </div>
+  );
+}
+
+/* ====== QUẢN LÝ QUỸ ====== */
+function AccountManager({ accounts, router }: { accounts: any[]; router: any }) {
+  const [pending, startTransition] = useTransition();
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  function onSubmit(fd: FormData) {
+    setMsg(null);
+    startTransition(async () => {
+      let r: any;
+      if (editId) {
+        r = await updateAccount(editId, fd);
+      } else {
+        r = await createAccount(fd);
+      }
+      if (r.ok) {
+        setShowForm(false);
+        setEditId(null);
+        setMsg(editId ? "Đã cập nhật!" : "Đã thêm!");
+        router.refresh();
+      } else {
+        setMsg(r.error);
+      }
+    });
+  }
+
+  function handleDelete(id: string) {
+    if (!confirm("Bạn có chắc muốn xóa Quỹ này?")) return;
+    startTransition(async () => {
+      const r = await deleteAccount(id);
+      if (r.ok) {
+        setMsg("Đã xóa!");
+        router.refresh();
+      } else {
+        setMsg(r.error);
+      }
+    });
+  }
+
+  function startEdit(account: any) {
+    setEditId(account.id);
+    setShowForm(true);
+  }
+
+  const totalBal = accounts.reduce((s: number, a: any) => s + Number(a.balance), 0);
+
+  return (
+    <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "var(--space-5)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-4)" }}>
+        <h2 style={{ fontSize: "var(--text-lg)", fontWeight: 700 }}>🏦 Quản lý Quỹ</h2>
+        <button onClick={() => { setEditId(null); setShowForm(!showForm); }} style={{ ...btnSm, background: "var(--color-primary)", color: "white" }}>
+          {showForm ? "Hủy" : "+ Thêm Quỹ"}
+        </button>
       </div>
 
-      <div style={{ background: "var(--color-surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)" }}>
-          <thead><tr style={{ borderBottom: "1px solid var(--color-border)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--color-foreground-muted)", textTransform: "uppercase" }}>
-            <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>Mã</th><th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>Tên</th><th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right" }}>Số dư</th><th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>TT</th>
-          </tr></thead>
-          <tbody>
-            {accounts.map((a: any, i: number) => (
-              <tr key={a.id} style={{ borderBottom: i < accounts.length - 1 ? "1px solid var(--color-muted)" : "none", background: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-hover)" }}>
-                <td style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 600, fontFamily: "var(--font-mono)" }}>{a.code}</td>
-                <td style={{ padding: "var(--space-3) var(--space-4)" }}>{a.name}</td>
-                <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right", fontWeight: 700, color: Number(a.balance) >= 0 ? "var(--color-success)" : "var(--color-destructive)" }}>{Number(a.balance).toLocaleString("vi-VN")} đ</td>
-                <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}><span style={{ padding: "2px 8px", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", fontWeight: 600, background: a.isActive ? "var(--color-success-bg)" : "var(--color-muted)", color: a.isActive ? "var(--color-success)" : "var(--color-foreground-muted)" }}>{a.isActive ? "Active" : "Khóa"}</span></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {msg && (
+        <div style={{ padding: "var(--space-2)", background: msg.includes("Đã") ? "var(--color-success-bg)" : "var(--color-destructive-bg)", color: msg.includes("Đã") ? "var(--color-success)" : "var(--color-destructive)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", marginBottom: "var(--space-3)" }}>
+          {msg}
+        </div>
+      )}
+
+      {showForm && (
+        <form action={onSubmit} style={{ display: "grid", gap: "var(--space-3)", marginBottom: "var(--space-4)", padding: "var(--space-4)", background: "var(--color-bg)", borderRadius: "var(--radius-md)" }}>
+          <input name="name" placeholder="Tên Quỹ (VD: Tiền mặt, Ngân hàng)" style={S} required />
+          <select name="type" style={S}>
+            <option value="CASH">Tiền mặt</option>
+            <option value="BANK">Ngân hàng</option>
+          </select>
+          <input name="initialBalance" type="number" step="1" placeholder="Số dư ban đầu" style={S} defaultValue={editId ? accounts.find((a: any) => a.id === editId)?.initialBalance || "0" : "0"} />
+          <input name="description" placeholder="Mô tả (tùy chọn)" style={S} defaultValue={editId ? accounts.find((a: any) => a.id === editId)?.description || "" : ""} />
+          <div style={{ display: "flex", gap: "var(--space-2)" }}>
+            <button type="submit" disabled={pending} style={{ ...btnSm, background: "var(--color-primary)", color: "white" }}>
+              {pending ? "..." : editId ? "Lưu" : "Thêm"}
+            </button>
+            <button type="button" onClick={() => { setShowForm(false); setEditId(null); }} style={{ ...btnSm, background: "var(--color-muted)", color: "var(--color-foreground)" }}>
+              Hủy
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div style={{ fontSize: "var(--text-sm)", marginBottom: "var(--space-3)", color: "var(--color-foreground-muted)" }}>
+        Tổng số dư: <strong>{totalBal.toLocaleString("vi-VN")} đ</strong>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+        {accounts.length === 0 ? (
+          <div style={{ padding: "var(--space-4)", textAlign: "center", color: "var(--color-foreground-muted)", fontSize: "var(--text-sm)" }}>Chưa có Quỹ nào</div>
+        ) : (
+          accounts.map((a: any) => (
+            <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-3)", background: "var(--color-bg)", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)" }}>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: "var(--text-sm)" }}>{a.name}</div>
+                <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)" }}>
+                  {a.type === "CASH" ? "💵 Tiền mặt" : "🏦 Ngân hàng"} · {Number(a.balance).toLocaleString("vi-VN")} đ
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                <button onClick={() => startEdit(a)} style={{ ...btnSm, background: "var(--color-surface)", color: "var(--color-primary)", border: "1px solid var(--color-primary)" }}>Sửa</button>
+                <button onClick={() => handleDelete(a.id)} style={{ ...btnSm, background: "var(--color-destructive-bg)", color: "var(--color-destructive)", border: "1px solid var(--color-destructive)" }}>Xóa</button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
 }
 
-/* ====== PHÂN LOẠI TAB ====== */
-function CategoriesTab({ categories, router }: { categories: any[]; router: any }) {
+/* ====== QUẢN LÝ PHÂN LOẠI ====== */
+function CategoryManager({ categories, router }: { categories: any[]; router: any }) {
   const [pending, startTransition] = useTransition();
   const [showForm, setShowForm] = useState(false);
-  const [parentId, setParentId] = useState("");
+  const [editId, setEditId] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [parentId, setParentId] = useState("");
 
   const roots = categories.filter((c: any) => !c.parentId);
   const children = (pid: string) => categories.filter((c: any) => c.parentId === pid);
 
   function onSubmit(fd: FormData) {
     setMsg(null);
-    startTransition(async () => { const r = await createTransactionCategory(fd); if (r.ok) { setShowForm(false); setMsg("Đã tạo!"); router.refresh(); } else setMsg(r.error); });
+    startTransition(async () => {
+      let r: any;
+      if (editId) {
+        r = await updateCategory(editId, fd);
+      } else {
+        r = await createCategory(fd);
+      }
+      if (r.ok) {
+        setShowForm(false);
+        setEditId(null);
+        setParentId("");
+        setMsg(editId ? "Đã cập nhật!" : "Đã thêm!");
+        router.refresh();
+      } else {
+        setMsg(r.error);
+      }
+    });
+  }
+
+  function handleDelete(id: string) {
+    if (!confirm("Bạn có chắc muốn xóa Phân loại này?")) return;
+    startTransition(async () => {
+      const r = await deleteCategory(id);
+      if (r.ok) {
+        setMsg("Đã xóa!");
+        router.refresh();
+      } else {
+        setMsg(r.error);
+      }
+    });
+  }
+
+  function startEdit(category: any) {
+    setEditId(category.id);
+    setParentId(category.parentId || "");
+    setShowForm(true);
   }
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--space-4)" }}>
-        <button onClick={() => setShowForm(!showForm)} style={{ ...btn, height: 36, fontSize: "var(--text-xs)" }}>+ Thêm danh mục con</button>
+    <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "var(--space-5)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-4)" }}>
+        <h2 style={{ fontSize: "var(--text-lg)", fontWeight: 700 }}>🏷️ Quản lý Phân loại</h2>
+        <button onClick={() => { setEditId(null); setParentId(""); setShowForm(!showForm); }} style={{ ...btnSm, background: "var(--color-primary)", color: "white" }}>
+          {showForm ? "Hủy" : "+ Thêm Phân loại"}
+        </button>
       </div>
 
-      {msg && <div style={{ padding: "var(--space-3)", background: msg.includes("Đã") ? "var(--color-success-bg)" : "var(--color-destructive-bg)", color: msg.includes("Đã") ? "var(--color-success)" : "var(--color-destructive)", borderRadius: "var(--radius-md)", fontSize: "var(--text-sm)", marginBottom: "var(--space-4)" }}>{msg}</div>}
-
-      {showForm && (
-        <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "var(--space-5)", marginBottom: "var(--space-4)", maxWidth: 480 }}>
-          <form action={onSubmit} style={{ display: "grid", gap: "var(--space-3)" }}>
-            <select value={parentId} onChange={e => setParentId(e.target.value)} style={S}>
-              <option value="">-- Chọn danh mục cha --</option>
-              {roots.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
-            <input type="hidden" name="parentId" value={parentId} />
-            <input name="name" placeholder="Tên danh mục con" style={S} required />
-            <input type="hidden" name="type" value="ALL" />
-            <div style={{ display: "flex", gap: "var(--space-2)" }}>
-              <button type="submit" disabled={pending} style={{ ...btn, height: 36, fontSize: "var(--text-xs)" }}>{pending ? "..." : "Tạo"}</button>
-              <button type="button" onClick={() => setShowForm(false)} style={{ ...btn, background: "var(--color-surface)", color: "var(--color-foreground)", border: "1px solid var(--color-border-strong)", height: 36, fontSize: "var(--text-xs)" }}>Hủy</button>
-            </div>
-          </form>
+      {msg && (
+        <div style={{ padding: "var(--space-2)", background: msg.includes("Đã") ? "var(--color-success-bg)" : "var(--color-destructive-bg)", color: msg.includes("Đã") ? "var(--color-success)" : "var(--color-destructive)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", marginBottom: "var(--space-3)" }}>
+          {msg}
         </div>
       )}
 
-      {roots.map((root: any) => (
-        <div key={root.id} style={{ marginBottom: "var(--space-5)" }}>
-          <h2 style={{ fontSize: "var(--text-base)", fontWeight: 700, color: "var(--color-primary)", marginBottom: "var(--space-3)", padding: "var(--space-3)", background: "var(--color-primary)10", borderRadius: "var(--radius-md)" }}>
-            📁 {root.name} <span style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", fontWeight: 400 }}>({children(root.id).length} con)</span>
-          </h2>
-          {children(root.id).length === 0 ? (
-            <div style={{ fontSize: "var(--text-sm)", color: "var(--color-foreground-muted)", padding: "var(--space-2) var(--space-4)" }}>Chưa có danh mục con</div>
-          ) : (
-            <div style={{ display: "grid", gap: "var(--space-2)", marginLeft: "var(--space-4)" }}>
-              {children(root.id).map((child: any) => (
-                <div key={child.id} style={{ padding: "var(--space-2) var(--space-4)", background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", fontSize: "var(--text-sm)", display: "flex", justifyContent: "space-between" }}>
-                  <span>📄 {child.name}</span>
-                  <span style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)" }}>{child.isActive ? "Active" : "Inactive"}</span>
+      {showForm && (
+        <form action={onSubmit} style={{ display: "grid", gap: "var(--space-3)", marginBottom: "var(--space-4)", padding: "var(--space-4)", background: "var(--color-bg)", borderRadius: "var(--radius-md)" }}>
+          <input name="name" placeholder="Tên Phân loại" style={S} required defaultValue={editId ? categories.find((c: any) => c.id === editId)?.name || "" : ""} />
+          <select name="parentId" style={S} value={parentId} onChange={e => setParentId(e.target.value)}>
+            <option value="">-- Danh mục cha (tùy chọn) --</option>
+            {roots.filter((r: any) => r.id !== editId).map((r: any) => (
+              <option key={r.id} value={r.id}>{r.name}</option>
+            ))}
+          </select>
+          <select name="direction" style={S} defaultValue={editId ? categories.find((c: any) => c.id === editId)?.direction || "IN" : "IN"}>
+            <option value="IN">📥 Thu vào</option>
+            <option value="OUT">📤 Chi ra</option>
+          </select>
+          <div style={{ display: "flex", gap: "var(--space-2)" }}>
+            <button type="submit" disabled={pending} style={{ ...btnSm, background: "var(--color-primary)", color: "white" }}>
+              {pending ? "..." : editId ? "Lưu" : "Thêm"}
+            </button>
+            <button type="button" onClick={() => { setShowForm(false); setEditId(null); setParentId(""); }} style={{ ...btnSm, background: "var(--color-muted)", color: "var(--color-foreground)" }}>
+              Hủy
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+        {roots.length === 0 ? (
+          <div style={{ padding: "var(--space-4)", textAlign: "center", color: "var(--color-foreground-muted)", fontSize: "var(--text-sm)" }}>Chưa có Phân loại nào</div>
+        ) : (
+          roots.map((root: any) => (
+            <div key={root.id}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-3)", background: "var(--color-primary)10", borderRadius: "var(--radius-md)", border: "1px solid var(--color-primary)", marginBottom: "var(--space-2)" }}>
+                <div>
+                  <span style={{ fontWeight: 700, fontSize: "var(--text-sm)" }}>📁 {root.name}</span>
+                  <span style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", marginLeft: "var(--space-2)" }}>
+                    {root.direction === "IN" ? "📥 Thu" : "📤 Chi"}
+                  </span>
                 </div>
-              ))}
+                <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                  <button onClick={() => startEdit(root)} style={{ ...btnSm, background: "var(--color-surface)", color: "var(--color-primary)", border: "1px solid var(--color-primary)" }}>Sửa</button>
+                  <button onClick={() => handleDelete(root.id)} style={{ ...btnSm, background: "var(--color-destructive-bg)", color: "var(--color-destructive)", border: "1px solid var(--color-destructive)" }}>Xóa</button>
+                </div>
+              </div>
+              {children(root.id).length > 0 && (
+                <div style={{ marginLeft: "var(--space-5)", display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+                  {children(root.id).map((child: any) => (
+                    <div key={child.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-2) var(--space-3)", background: "var(--color-bg)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)" }}>
+                      <span style={{ fontSize: "var(--text-sm)" }}>📄 {child.name}</span>
+                      <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                        <button onClick={() => startEdit(child)} style={{ ...btnSm, background: "var(--color-surface)", color: "var(--color-primary)", border: "1px solid var(--color-primary)" }}>Sửa</button>
+                        <button onClick={() => handleDelete(child.id)} style={{ ...btnSm, background: "var(--color-destructive-bg)", color: "var(--color-destructive)", border: "1px solid var(--color-destructive)" }}>Xóa</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      ))}
+          ))
+        )}
+      </div>
     </div>
   );
 }
