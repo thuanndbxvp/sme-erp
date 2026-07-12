@@ -98,13 +98,13 @@ export default function OrderTabsClient({ salesOrders, purchaseOrders, initialTa
             ) : orders.map((o, i) => (
               <tr key={o.id} style={{ borderBottom: i < orders.length - 1 ? "1px solid var(--color-muted)" : "none", background: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-hover)" }}>
                 <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>{(currentPage - 1) * 20 + i + 1}</td>
-                <td style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 500 }}>{o.orderCode}</td>
+                <td style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 500, whiteSpace: "nowrap" }}>{o.orderCode}</td>
                 <td style={{ padding: "var(--space-3) var(--space-4)" }}>{initialTab === "SO" ? o.customer?.name ?? "—" : o.supplier?.name ?? "—"}</td>
                 <td style={{ padding: "var(--space-3) var(--space-4)", fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)" }}>
                   {o.items?.slice(0, 3).map((it: any) => `${it.productName} x${it.qty}`).join(", ") ?? "—"}
                   {(o.items?.length ?? 0) > 3 ? ` +${o.items.length - 3}` : ""}
                 </td>
-                <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right", fontWeight: 600 }}>{Number(o.totalAmount).toLocaleString("vi-VN")} đ</td>
+                <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right", fontWeight: 600, whiteSpace: "nowrap" }}>{Number(o.totalAmount).toLocaleString("vi-VN")} đ</td>
                 <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>
                   <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", fontWeight: 600, background: statusColor(o.status) + "20", color: statusColor(o.status) }}>
                     {o.status}
