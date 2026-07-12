@@ -265,15 +265,19 @@ function AccountManager({ accounts, router }: { accounts: any[]; router: any }) 
           accounts.map((a: any) => (
             <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-3)", background: "var(--color-bg)", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)" }}>
               <div>
-                <div style={{ fontWeight: 600, fontSize: "var(--text-sm)" }}>{a.name}</div>
+                <div style={{ fontWeight: 600, fontSize: "var(--text-sm)" }}>{a.name} {["BANK", "CASH"].includes(a.code) && <span style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)" }}>[Hệ thống]</span>}</div>
                 <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)" }}>
                   {a.type === "CASH" ? "💵 Tiền mặt" : "🏦 Ngân hàng"} · {Number(a.balance).toLocaleString("vi-VN")} đ
                 </div>
               </div>
-              <div style={{ display: "flex", gap: "var(--space-2)" }}>
-                <button onClick={() => startEdit(a)} style={{ ...btnSm, background: "var(--color-surface)", color: "var(--color-primary)", border: "1px solid var(--color-primary)" }}>Sửa</button>
-                <button onClick={() => handleDelete(a.id)} style={{ ...btnSm, background: "var(--color-destructive-bg)", color: "var(--color-destructive)", border: "1px solid var(--color-destructive)" }}>Xóa</button>
-              </div>
+              {["BANK", "CASH"].includes(a.code) ? (
+                <span style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)" }}>Khóa</span>
+              ) : (
+                <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                  <button onClick={() => startEdit(a)} style={{ ...btnSm, background: "var(--color-surface)", color: "var(--color-primary)", border: "1px solid var(--color-primary)" }}>Sửa</button>
+                  <button onClick={() => handleDelete(a.id)} style={{ ...btnSm, background: "var(--color-destructive-bg)", color: "var(--color-destructive)", border: "1px solid var(--color-destructive)" }}>Xóa</button>
+                </div>
+              )}
             </div>
           ))
         )}
@@ -360,6 +364,7 @@ function CategoryManager({ categories, router }: { categories: any[]; router: an
           <select name="direction" style={S} defaultValue={editId ? categories.find((c: any) => c.id === editId)?.direction || "IN" : "IN"}>
             <option value="IN">📥 Thu vào</option>
             <option value="OUT">📤 Chi ra</option>
+            <option value="ALL">Không phân loại</option>
           </select>
           <div style={{ display: "flex", gap: "var(--space-2)" }}>
             <button type="submit" disabled={pending} style={{ ...btnSm, background: "var(--color-primary)", color: "white" }}>
@@ -382,13 +387,18 @@ function CategoryManager({ categories, router }: { categories: any[]; router: an
                 <div>
                   <span style={{ fontWeight: 700, fontSize: "var(--text-sm)" }}>📁 {root.name}</span>
                   <span style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", marginLeft: "var(--space-2)" }}>
-                    {root.direction === "IN" ? "📥 Thu" : "📤 Chi"}
+                    {root.direction === "IN" ? "📥 Thu" : root.direction === "OUT" ? "📤 Chi" : "Không phân loại"}
                   </span>
+                  {["Dòng tiền Kinh doanh", "Dòng tiền Vận hành"].includes(root.name) && <span style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", marginLeft: "var(--space-2)" }}>[Hệ thống]</span>}
                 </div>
-                <div style={{ display: "flex", gap: "var(--space-2)" }}>
-                  <button onClick={() => startEdit(root)} style={{ ...btnSm, background: "var(--color-surface)", color: "var(--color-primary)", border: "1px solid var(--color-primary)" }}>Sửa</button>
-                  <button onClick={() => handleDelete(root.id)} style={{ ...btnSm, background: "var(--color-destructive-bg)", color: "var(--color-destructive)", border: "1px solid var(--color-destructive)" }}>Xóa</button>
-                </div>
+                {["Dòng tiền Kinh doanh", "Dòng tiền Vận hành"].includes(root.name) ? (
+                  <span style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)" }}>Khóa</span>
+                ) : (
+                  <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                    <button onClick={() => startEdit(root)} style={{ ...btnSm, background: "var(--color-surface)", color: "var(--color-primary)", border: "1px solid var(--color-primary)" }}>Sửa</button>
+                    <button onClick={() => handleDelete(root.id)} style={{ ...btnSm, background: "var(--color-destructive-bg)", color: "var(--color-destructive)", border: "1px solid var(--color-destructive)" }}>Xóa</button>
+                  </div>
+                )}
               </div>
               {children(root.id).length > 0 && (
                 <div style={{ marginLeft: "var(--space-5)", display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
