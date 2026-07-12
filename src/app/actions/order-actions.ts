@@ -294,20 +294,7 @@ export async function recordTransaction(formData: FormData) {
   });
 }
 
-export async function updateTransactionAction(id: string, formData: FormData) {
-  const session = await auth();
-  await requirePermission(session?.user?.id, "cashflow.update");
-  return safeAction(async () => {
-    await TransactionService.updateTransaction(id, {
-      type: formData.get("type") as "INCOME" | "EXPENSE",
-      amount: formData.get("amount") as string,
-      accountId: formData.get("accountId") as string,
-      description: (formData.get("description") as string) || null,
-    });
-    revalidatePath("/cashflow");
-    return { ok: true };
-  });
-}
+// updateTransactionAction removed: not implemented in service and not used in UI.
 
 export async function deleteTransactionAction(id: string) {
   const session = await auth();
