@@ -14,7 +14,7 @@ export async function testRecordTransaction() {
       description: "Test",
     });
     return "OK";
-  } catch (e: any) {
-    return e.message || String(e);
+  } catch (e: unknown) {
+    return e instanceof Error ? e.message : String(e);
   }
 }

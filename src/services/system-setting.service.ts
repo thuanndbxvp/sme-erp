@@ -18,7 +18,7 @@ export class SystemSettingService {
         { tags: ['system-settings', `system-setting-${key}`], revalidate: false }
       );
       return await getCachedSetting(key);
-    } catch (err: any) {
+    } catch {
       // Fallback for Server Actions where unstable_cache might throw "incrementalCache missing"
       const setting = await prisma.systemSetting.findUnique({
         where: { key },

@@ -53,6 +53,6 @@ export async function safeAction<T>(fn: () => Promise<T>): Promise<ActionResult<
       return failure(err.message);
     }
     logger.error({ err }, "Lỗi không xác định trong server action");
-    return failure((err as any)?.message || "Có lỗi xảy ra, vui lòng thử lại");
+    return failure(err instanceof Error ? err.message : "Có lỗi xảy ra, vui lòng thử lại");
   }
 }
