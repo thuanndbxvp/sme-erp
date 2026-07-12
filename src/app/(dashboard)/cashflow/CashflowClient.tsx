@@ -43,8 +43,14 @@ function CashflowTab({ accounts, transactions, categories, router }: { accounts:
   const [pending, startTransition] = useTransition();
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
+
   const roots = categories.filter((c: any) => !c.parentId);
   const children = (pid: string) => categories.filter((c: any) => c.parentId === pid);
+
+  const totalPages = Math.ceil(transactions.length / pageSize);
+  const displayTransactions = transactions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   function onSubmit(fd: FormData) {
     setError(null);
@@ -139,12 +145,14 @@ function CashflowTab({ accounts, transactions, categories, router }: { accounts:
         <div style={{ maxHeight: 400, overflowY: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)" }}>
             <thead style={{ position: "sticky", top: 0, zIndex: 1, background: "var(--color-surface)" }}><tr style={{ borderBottom: "1px solid var(--color-border)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--color-foreground-muted)", textTransform: "uppercase" }}>
+              <th style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center", width: 50 }}>STT</th>
               <th style={{ padding: "var(--space-2) var(--space-3)", textAlign: "left" }}>Ngày</th><th style={{ padding: "var(--space-2) var(--space-3)", textAlign: "left" }}>TK</th><th style={{ padding: "var(--space-2) var(--space-3)", textAlign: "right" }}>Số tiền</th><th style={{ padding: "var(--space-2) var(--space-3)", textAlign: "left" }}>Diễn giải</th>
             </tr></thead>
             <tbody>
-              {transactions.length === 0 ? <tr><td colSpan={4} style={{ padding: "var(--space-6)", textAlign: "center", color: "var(--color-foreground-muted)" }}>Chưa có giao dịch</td></tr> :
-                transactions.slice(0, 150).map((t: any, i: number) => (
-                  <tr key={t.id} style={{ borderBottom: i < Math.min(transactions.length, 150) - 1 ? "1px solid var(--color-muted)" : "none", background: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-hover)" }}>
+              {displayTransactions.length === 0 ? <tr><td colSpan={5} style={{ padding: "var(--space-6)", textAlign: "center", color: "var(--color-foreground-muted)" }}>Chưa có giao dịch</td></tr> :
+                displayTransactions.map((t: any, i: number) => (
+                  <tr key={t.id} style={{ borderBottom: i < displayTransactions.length - 1 ? "1px solid var(--color-muted)" : "none", background: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-hover)" }}>
+                    <td style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center" }}>{(currentPage - 1) * pageSize + i + 1}</td>
                     <td style={{ padding: "var(--space-2) var(--space-3)", whiteSpace: "nowrap" }}>{new Date(t.date).toLocaleDateString("vi-VN")}</td>
                     <td style={{ padding: "var(--space-2) var(--space-3)" }}>{t.account.code}</td>
                     <td style={{ padding: "var(--space-2) var(--space-3)", textAlign: "right", fontWeight: 600, color: t.type === "INCOME" ? "var(--color-success)" : "var(--color-destructive)" }}>{t.type === "INCOME" ? "+" : "−"}{Number(t.amount).toLocaleString("vi-VN")} đ</td>
@@ -154,6 +162,15 @@ function CashflowTab({ accounts, transactions, categories, router }: { accounts:
             </tbody>
           </table>
         </div>
+        {totalPages > 1 && (
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "var(--space-2)", padding: "var(--space-3)", borderTop: "1px solid var(--color-border)" }}>
+            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} style={{ padding: "var(--space-1) var(--space-3)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)", background: "var(--color-surface)", cursor: currentPage === 1 ? "not-allowed" : "pointer", opacity: currentPage === 1 ? 0.5 : 1 }}>‹</button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+              <button key={p} onClick={() => setCurrentPage(p)} style={{ padding: "var(--space-1) var(--space-2)", minWidth: 32, borderRadius: "var(--radius-sm)", border: "1px solid", borderColor: p === currentPage ? "var(--color-primary)" : "var(--color-border)", background: p === currentPage ? "var(--color-primary)" : "var(--color-surface)", color: p === currentPage ? "white" : "var(--color-foreground)", cursor: "pointer", fontSize: "var(--text-xs)" }}>{p}</button>
+            ))}
+            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} style={{ padding: "var(--space-1) var(--space-3)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)", background: "var(--color-surface)", cursor: currentPage === totalPages ? "not-allowed" : "pointer", opacity: currentPage === totalPages ? 0.5 : 1 }}>›</button>
+          </div>
+        )}
       </div>
     </div>
   );

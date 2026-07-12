@@ -117,8 +117,17 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
     if (prod) { updateItem(id, "unit", prod.unit || "cái"); if (!items.find(i => i.id === id)?.buyPrice) updateItem(id, "buyPrice", prod.buyPrice?.toString() || ""); if (!items.find(i => i.id === id)?.sellPrice) updateItem(id, "sellPrice", prod.sellPrice?.toString() || ""); }
   }
 
-  const totalBuy = items.reduce((s, it) => s + (Number(String(it.buyPrice).replace(/\D/g, "")) || 0) * (Number(it.qty) || 0), 0);
-  const totalSell = items.reduce((s, it) => s + (Number(String(it.sellPrice).replace(/\D/g, "")) || 0) * (Number(it.qty) || 0), 0);
+  const totalBuy = items.reduce((s, it) => {
+    const base = (Number(String(it.buyPrice).replace(/\D/g, "")) || 0) * (Number(it.qty) || 0);
+    const tax = base * (Number(it.purchaseTaxRate) || 0) / 100;
+    return s + base + tax;
+  }, 0);
+
+  const totalSell = items.reduce((s, it) => {
+    const base = (Number(String(it.sellPrice).replace(/\D/g, "")) || 0) * (Number(it.qty) || 0);
+    const tax = base * (Number(it.taxRate) || 0) / 100;
+    return s + base + tax;
+  }, 0);
   const totalQty = items.reduce((s, it) => s + (Number(it.qty) || 0), 0);
 
   function applyPayNCCNow() { setPurchaseStatus("PAID"); setPurchasePaidAmount(String(totalBuy)); }
@@ -289,6 +298,7 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)", minWidth: 750 }}>
             <thead><tr style={{ borderBottom: "1px solid var(--color-border)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--color-foreground-muted)", textTransform: "uppercase", letterSpacing: "0.05em", background: "#F8FAFC" }}>
+              <th style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center", width: 50 }}>STT</th>
               <th style={{ padding: "var(--space-2) var(--space-3)", textAlign: "left", minWidth: 150 }}>Sản phẩm</th>
               <th style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center", width: 60 }}>SL</th>
               <th style={{ padding: "var(--space-2) var(--space-3)", textAlign: "left", width: 70 }}>ĐVT</th>
@@ -298,8 +308,9 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
               <th style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center", width: 40 }}></th>
             </tr></thead>
             <tbody>
-              {items.map((it) => (
+              {items.map((it, index) => (
                 <tr key={it.id} style={{ borderBottom: "1px solid var(--color-muted)" }}>
+                  <td style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center" }}>{index + 1}</td>
                   <td style={{ padding: "var(--space-2) var(--space-3)" }}>
                     <input value={it.productName} onChange={e => handleProductSelect(it.id, e.target.value)} placeholder="Chọn hoặc nhập tên..." list="products" style={{ ...S, border: "none", background: "transparent", width: "100%" }} />
                     <datalist id="products">{products.map((p: any) => <option key={p.id} value={p.name} />)}</datalist>

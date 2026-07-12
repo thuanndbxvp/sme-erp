@@ -7,6 +7,7 @@ import { createRole, updateRolePermissions } from "@/app/actions/admin-actions";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const btnSm: React.CSSProperties = { fontSize: "var(--text-xs)", padding: "2px 8px", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-primary)", background: "transparent", color: "var(--color-primary)", cursor: "pointer" };
+const pageSize = 20;
 
 export default function RolesClient({ roles, permissions, users }: { roles: any[]; permissions: any[]; users: any[] }) {
   const router = useRouter();
@@ -15,6 +16,13 @@ export default function RolesClient({ roles, permissions, users }: { roles: any[
   const [editPerms, setEditPerms] = useState<string | null>(null); // roleId being edited
   const [selectedPerms, setSelectedPerms] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [currentPageRoles, setCurrentPageRoles] = useState(1);
+  const [currentPageUsers, setCurrentPageUsers] = useState(1);
+
+  const totalPagesRoles = Math.ceil(roles.length / pageSize);
+  const displayRoles = roles.slice((currentPageRoles - 1) * pageSize, currentPageRoles * pageSize);
+  const totalPagesUsers = Math.ceil(users.length / pageSize);
+  const displayUsers = users.slice((currentPageUsers - 1) * pageSize, currentPageUsers * pageSize);
 
   function startEditPerms(role: any) {
     setEditPerms(role.id);
@@ -82,17 +90,19 @@ export default function RolesClient({ roles, permissions, users }: { roles: any[
 
       {/* Roles table */}
       <h2 style={{ fontSize: "var(--text-lg)", fontWeight: 600, marginBottom: "var(--space-3)" }}>Vai trò ({roles.length})</h2>
-      <div style={{ background: "var(--color-surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", overflow: "hidden", boxShadow: "var(--shadow-sm)", marginBottom: "var(--space-8)" }}>
+      <div style={{ background: "var(--color-surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", overflow: "hidden", boxShadow: "var(--shadow-sm)", marginBottom: "var(--space-3)" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)" }}>
           <thead><tr style={{ borderBottom: "1px solid var(--color-border)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--color-foreground-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center", width: 50 }}>STT</th>
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>Vai trò</th>
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>Quyền</th>
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>Users</th>
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}></th>
           </tr></thead>
           <tbody>
-            {roles.map((r: any, i: number) => (
-              <tr key={r.id} style={{ borderBottom: i < roles.length - 1 ? "1px solid var(--color-muted)" : "none", background: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-hover)" }}>
+            {displayRoles.map((r: any, i: number) => (
+              <tr key={r.id} style={{ borderBottom: i < displayRoles.length - 1 ? "1px solid var(--color-muted)" : "none", background: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-hover)" }}>
+                <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>{(currentPageRoles - 1) * pageSize + i + 1}</td>
                 <td style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 600 }}>{r.name}</td>
                 <td style={{ padding: "var(--space-3) var(--space-4)" }}>
                   {editPerms === r.id ? (
@@ -121,6 +131,15 @@ export default function RolesClient({ roles, permissions, users }: { roles: any[
             ))}
           </tbody>
         </table>
+        {totalPagesRoles > 1 && (
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "var(--space-2)", padding: "var(--space-3)", borderTop: "1px solid var(--color-border)" }}>
+            <button onClick={() => setCurrentPageRoles(p => Math.max(1, p - 1))} disabled={currentPageRoles === 1} style={{ padding: "var(--space-1) var(--space-3)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)", background: "var(--color-surface)", cursor: currentPageRoles === 1 ? "not-allowed" : "pointer", opacity: currentPageRoles === 1 ? 0.5 : 1 }}>‹</button>
+            {Array.from({ length: totalPagesRoles }, (_, i) => i + 1).map(p => (
+              <button key={p} onClick={() => setCurrentPageRoles(p)} style={{ padding: "var(--space-1) var(--space-2)", minWidth: 32, borderRadius: "var(--radius-sm)", border: "1px solid", borderColor: p === currentPageRoles ? "var(--color-primary)" : "var(--color-border)", background: p === currentPageRoles ? "var(--color-primary)" : "var(--color-surface)", color: p === currentPageRoles ? "white" : "var(--color-foreground)", cursor: "pointer", fontSize: "var(--text-xs)" }}>{p}</button>
+            ))}
+            <button onClick={() => setCurrentPageRoles(p => Math.min(totalPagesRoles, p + 1))} disabled={currentPageRoles === totalPagesRoles} style={{ padding: "var(--space-1) var(--space-3)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)", background: "var(--color-surface)", cursor: currentPageRoles === totalPagesRoles ? "not-allowed" : "pointer", opacity: currentPageRoles === totalPagesRoles ? 0.5 : 1 }}>›</button>
+          </div>
+        )}
       </div>
 
       {/* Users */}
@@ -128,13 +147,15 @@ export default function RolesClient({ roles, permissions, users }: { roles: any[
       <div style={{ background: "var(--color-surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", overflow: "hidden", boxShadow: "var(--shadow-sm)" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)" }}>
           <thead><tr style={{ borderBottom: "1px solid var(--color-border)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--color-foreground-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center", width: 50 }}>STT</th>
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>Tên</th>
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>Email</th>
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>Vai trò</th>
           </tr></thead>
           <tbody>
-            {users.map((u: any, i: number) => (
-              <tr key={u.id} style={{ borderBottom: i < users.length - 1 ? "1px solid var(--color-muted)" : "none", background: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-hover)" }}>
+            {displayUsers.map((u: any, i: number) => (
+              <tr key={u.id} style={{ borderBottom: i < displayUsers.length - 1 ? "1px solid var(--color-muted)" : "none", background: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-hover)" }}>
+                <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>{(currentPageUsers - 1) * pageSize + i + 1}</td>
                 <td style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 500 }}>{u.name}</td>
                 <td style={{ padding: "var(--space-3) var(--space-4)", fontSize: "var(--text-xs)" }}>{u.email}</td>
                 <td style={{ padding: "var(--space-3) var(--space-4)" }}>{u.role?.name ?? "—"}</td>
@@ -142,6 +163,15 @@ export default function RolesClient({ roles, permissions, users }: { roles: any[
             ))}
           </tbody>
         </table>
+        {totalPagesUsers > 1 && (
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "var(--space-2)", padding: "var(--space-3)", borderTop: "1px solid var(--color-border)" }}>
+            <button onClick={() => setCurrentPageUsers(p => Math.max(1, p - 1))} disabled={currentPageUsers === 1} style={{ padding: "var(--space-1) var(--space-3)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)", background: "var(--color-surface)", cursor: currentPageUsers === 1 ? "not-allowed" : "pointer", opacity: currentPageUsers === 1 ? 0.5 : 1 }}>‹</button>
+            {Array.from({ length: totalPagesUsers }, (_, i) => i + 1).map(p => (
+              <button key={p} onClick={() => setCurrentPageUsers(p)} style={{ padding: "var(--space-1) var(--space-2)", minWidth: 32, borderRadius: "var(--radius-sm)", border: "1px solid", borderColor: p === currentPageUsers ? "var(--color-primary)" : "var(--color-border)", background: p === currentPageUsers ? "var(--color-primary)" : "var(--color-surface)", color: p === currentPageUsers ? "white" : "var(--color-foreground)", cursor: "pointer", fontSize: "var(--text-xs)" }}>{p}</button>
+            ))}
+            <button onClick={() => setCurrentPageUsers(p => Math.min(totalPagesUsers, p + 1))} disabled={currentPageUsers === totalPagesUsers} style={{ padding: "var(--space-1) var(--space-3)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)", background: "var(--color-surface)", cursor: currentPageUsers === totalPagesUsers ? "not-allowed" : "pointer", opacity: currentPageUsers === totalPagesUsers ? 0.5 : 1 }}>›</button>
+          </div>
+        )}
       </div>
     </div>
   );

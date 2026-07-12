@@ -81,6 +81,7 @@ export default function OrderTabsClient({ salesOrders, purchaseOrders, initialTa
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)", fontVariantNumeric: "tabular-nums" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid var(--color-border)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--color-foreground-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center", width: 50 }}>STT</th>
               <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>Mã</th>
               <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>{initialTab === "SO" ? "Khách hàng" : "Nhà cung cấp"}</th>
               <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>Sản phẩm</th>
@@ -93,9 +94,10 @@ export default function OrderTabsClient({ salesOrders, purchaseOrders, initialTa
           </thead>
           <tbody>
             {orders.length === 0 ? (
-              <tr><td colSpan={8} style={{ padding: "var(--space-10)", textAlign: "center", color: "var(--color-foreground-muted)" }}>Chưa có {label.toLowerCase()} nào</td></tr>
+              <tr><td colSpan={9} style={{ padding: "var(--space-10)", textAlign: "center", color: "var(--color-foreground-muted)" }}>Chưa có {label.toLowerCase()} nào</td></tr>
             ) : orders.map((o, i) => (
               <tr key={o.id} style={{ borderBottom: i < orders.length - 1 ? "1px solid var(--color-muted)" : "none", background: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-hover)" }}>
+                <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>{(currentPage - 1) * 20 + i + 1}</td>
                 <td style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 500 }}>{o.orderCode}</td>
                 <td style={{ padding: "var(--space-3) var(--space-4)" }}>{initialTab === "SO" ? o.customer?.name ?? "—" : o.supplier?.name ?? "—"}</td>
                 <td style={{ padding: "var(--space-3) var(--space-4)", fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)" }}>

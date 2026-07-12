@@ -7,6 +7,7 @@ import { createUser, updateUser, deactivateUser, resetUserPassword } from "@/app
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const S: React.CSSProperties = { width: "100%", height: 40, padding: "0 10px", border: "1px solid var(--color-border-strong)", borderRadius: "var(--radius-md)", fontSize: "var(--text-sm)", fontFamily: "var(--font-sans)", background: "var(--color-surface)" };
+const pageSize = 20;
 
 export default function UsersClient({ users, roles }: { users: any[]; roles: any[] }) {
   const router = useRouter();
@@ -16,6 +17,10 @@ export default function UsersClient({ users, roles }: { users: any[]; roles: any
   const [error, setError] = useState<string | null>(null);
   const [resetPwUserId, setResetPwUserId] = useState<string | null>(null);
   const [newPw, setNewPw] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.ceil(users.length / pageSize);
+  const displayUsers = users.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   function onSubmit(fd: FormData) {
     setError(null);
@@ -91,6 +96,7 @@ export default function UsersClient({ users, roles }: { users: any[]; roles: any
       <div style={{ background: "var(--color-surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", overflow: "hidden", boxShadow: "var(--shadow-sm)" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)" }}>
           <thead><tr style={{ borderBottom: "1px solid var(--color-border)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--color-foreground-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center", width: 50 }}>STT</th>
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>Tên</th>
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>Email</th>
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>Vai trò</th>
@@ -98,8 +104,9 @@ export default function UsersClient({ users, roles }: { users: any[]; roles: any
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>Thao tác</th>
           </tr></thead>
           <tbody>
-            {users.map((u: any, i: number) => (
-              <tr key={u.id} style={{ borderBottom: i < users.length - 1 ? "1px solid var(--color-muted)" : "none", background: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-hover)" }}>
+            {displayUsers.map((u: any, i: number) => (
+              <tr key={u.id} style={{ borderBottom: i < displayUsers.length - 1 ? "1px solid var(--color-muted)" : "none", background: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-hover)" }}>
+                <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>{(currentPage - 1) * pageSize + i + 1}</td>
                 <td style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 500 }}>{u.name}</td>
                 <td style={{ padding: "var(--space-3) var(--space-4)", fontSize: "var(--text-xs)" }}>{u.email}</td>
                 <td style={{ padding: "var(--space-3) var(--space-4)" }}>{u.role?.name ?? "—"}</td>
@@ -115,6 +122,15 @@ export default function UsersClient({ users, roles }: { users: any[]; roles: any
             ))}
           </tbody>
         </table>
+        {totalPages > 1 && (
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "var(--space-2)", padding: "var(--space-3)", borderTop: "1px solid var(--color-border)" }}>
+            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} style={{ padding: "var(--space-1) var(--space-3)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)", background: "var(--color-surface)", cursor: currentPage === 1 ? "not-allowed" : "pointer", opacity: currentPage === 1 ? 0.5 : 1 }}>‹</button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+              <button key={p} onClick={() => setCurrentPage(p)} style={{ padding: "var(--space-1) var(--space-2)", minWidth: 32, borderRadius: "var(--radius-sm)", border: "1px solid", borderColor: p === currentPage ? "var(--color-primary)" : "var(--color-border)", background: p === currentPage ? "var(--color-primary)" : "var(--color-surface)", color: p === currentPage ? "white" : "var(--color-foreground)", cursor: "pointer", fontSize: "var(--text-xs)" }}>{p}</button>
+            ))}
+            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} style={{ padding: "var(--space-1) var(--space-3)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)", background: "var(--color-surface)", cursor: currentPage === totalPages ? "not-allowed" : "pointer", opacity: currentPage === totalPages ? 0.5 : 1 }}>›</button>
+          </div>
+        )}
       </div>
     </div>
   );
