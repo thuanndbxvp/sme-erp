@@ -476,3 +476,12 @@ model SystemSetting {
   value     String
   updatedAt DateTime @updatedAt
 }
+
+model TransactionCategory {
+  id        String   @id @default(cuid())
+  name      String
+  type      String
+  parentId  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}

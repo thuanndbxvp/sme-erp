@@ -1,6 +1,6 @@
 # 📜 Quy tắc Chung Toàn Hệ Thống (Global Rules)
 
-Quy tắc này áp dụng cho TẤT CẢ các Tầng (1, 2, và 3). Không có ngoại lệ.
+Quy tắc này áp dụng cho TẤT CẢ các Tầng (1 và 2). Không có ngoại lệ.
 
 ## 1. Ngôn ngữ (Language)
 - **Code (Tên biến, hàm, class, schema):** 100% Tiếng Anh.

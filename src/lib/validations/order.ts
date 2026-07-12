@@ -67,6 +67,7 @@ export type CreatePurchaseOrderInput = z.infer<typeof createPurchaseOrderSchema>
  */
 export const dropshipItemInput = salesOrderItemInput.extend({
   buyPrice: moneySchema, // giá nhập NCC cho dòng này (tạo PO)
+  purchaseTaxAmount: moneySchema.default("0"),
 });
 
 export const createDropshipOrderSchema = z.object({

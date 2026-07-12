@@ -9,7 +9,7 @@ import {
   TRANSACTION_TYPE,
   PAYMENT_DIRECTION,
 } from "@/domain/constants";
-import type { PaymentDirectionValue } from "@/domain/constants";
+import type { PaymentDirectionValue, CashFlowGroupValue } from "@/domain/constants";
 
 /**
  * PaymentService — recordPayment (invariant C3).
@@ -42,6 +42,7 @@ export interface RecordPaymentInput {
   applications: PaymentApplicationInput[];
   customerId?: string | null;
   supplierId?: string | null;
+  cashFlowGroup?: CashFlowGroupValue;
   description?: string | null;
 }
 
@@ -82,6 +83,7 @@ export class PaymentService {
           accountId: input.accountId,
           customerId: input.customerId ?? null,
           supplierId: input.supplierId ?? null,
+          cashFlowGroup: input.cashFlowGroup,
           description: input.description ?? "Thanh toán",
         });
 

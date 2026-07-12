@@ -5,7 +5,7 @@ argument-hint: <thư-mục-hoặc-tính-năng> (Ví dụ: "ui/" hoặc "core/pip
 
 # Lệnh Khảo Sát Codebase (Codebase Review/Survey)
 
-**Vai trò:** Bạn đang thực hiện nhiệm vụ Khảo sát (Surveyor). Dù bạn đang đóng vai Tầng 1 (Planner), Tầng 2 (Coder) hay Tầng 3 (Auditor), khi lệnh này được gọi, mục tiêu duy nhất của bạn là **ĐỌC, PHÂN TÍCH và BÁO CÁO**, tuyệt đối **KHÔNG SỬA CODE**.
+**Vai trò:** Bạn đang thực hiện nhiệm vụ Khảo sát (Surveyor). Dù bạn đang đóng vai Tầng 1 (Kiến trúc sư) hay Tầng 2 (Kỹ sư), khi lệnh này được gọi, mục tiêu duy nhất của bạn là **ĐỌC, PHÂN TÍCH và BÁO CÁO**, tuyệt đối **KHÔNG SỬA CODE**.
 
 ## 🎯 Mục Tiêu
 Cung cấp cho User (hoặc cho chính bạn trong các bước suy luận sau) một bức tranh toàn cảnh về dự án hoặc một module cụ thể.
@@ -13,16 +13,16 @@ Cung cấp cho User (hoặc cho chính bạn trong các bước suy luận sau) 
 ## 🛠 Hướng Dẫn Thực Thi (4 Bước Bắt Buộc)
 
 ### Bước 1: Quét Cấu Trúc Bằng CodeGraph
-- Nếu User nhập `$ARGUMENTS` (ví dụ: `/reviewcode ui/`), hãy giới hạn phạm vi khảo sát trong thư mục/module đó.
+- Nếu User nhập `$ARGUMENTS` (ví dụ: `khảo sát ui/`), hãy giới hạn phạm vi khảo sát trong thư mục/module đó.
 - Nếu `$ARGUMENTS` rỗng, hãy khảo sát toàn bộ dự án.
-- **Hành động:** Sử dụng công cụ `codegraph_files` để lấy cây thư mục. Chú ý các file cốt lõi (entry point) như `main.py`, `app.py` hoặc các thư mục lớn như `core/`, `ui/`.
+- **Hành động:** Sử dụng công cụ `codegraph_files` để lấy cây thư mục. Chú ý các file cốt lõi (entry point) như `main.py`, `app.py`, `layout.tsx` hoặc các thư mục lớn như `core/`, `ui/`, `app/`.
 
 ### Bước 2: Phân Tích Tech Stack & Dependencies
 - Đọc file `requirements.txt`, `Pipfile`, `package.json`, hoặc `pyproject.toml` (nếu có).
-- Xác định các thư viện lõi (Ví dụ: PyQt6, FastAPI, SQLAlchemy, v.v.).
+- Xác định các thư viện lõi.
 
 ### Bước 3: Phân Tích Điểm Neo & Kiến Trúc (Deep Dive)
-- Sử dụng `codegraph_search` để tìm các class quan trọng (ví dụ: `MainWindow`, `PipelineWorker`, `AppState`).
+- Sử dụng `codegraph_search` để tìm các class quan trọng.
 - Sử dụng `codegraph_node` và `codegraph_context` để hiểu các Class/Hàm này giao tiếp với nhau như thế nào. 
 - *Mẹo:* Tìm kiếm các Design Pattern đang được dùng (Ví dụ: Singleton cho AppState, Event-Bus cho tín hiệu, v.v.).
 

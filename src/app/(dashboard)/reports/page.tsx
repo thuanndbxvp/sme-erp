@@ -59,14 +59,16 @@ export default async function ReportsPage() {
       <div style={{ background: "var(--color-surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", overflow: "hidden" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)", fontVariantNumeric: "tabular-nums" }}>
           <thead><tr style={{ borderBottom: "1px solid var(--color-border)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--color-foreground-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center", width: 50 }}>STT</th>
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>Sản phẩm</th>
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right" }}>SL bán</th>
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right" }}>Doanh thu</th>
           </tr></thead>
           <tbody>
-            {topProducts.length === 0 ? <tr><td colSpan={3} style={{ padding: "var(--space-6)", textAlign: "center", color: "var(--color-foreground-muted)" }}>Chưa có dữ liệu</td></tr> :
+            {topProducts.length === 0 ? <tr><td colSpan={4} style={{ padding: "var(--space-6)", textAlign: "center", color: "var(--color-foreground-muted)" }}>Chưa có dữ liệu</td></tr> :
               topProducts.map((p, i) => (
                 <tr key={p.name} style={{ borderBottom: i < topProducts.length - 1 ? "1px solid var(--color-muted)" : "none", background: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-hover)" }}>
+                  <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>{i + 1}</td>
                   <td style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 500 }}>{p.name}</td>
                   <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right" }}>{p.qty}</td>
                   <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right", fontWeight: 600 }}>{Number(p.revenue).toLocaleString("vi-VN")} đ</td>

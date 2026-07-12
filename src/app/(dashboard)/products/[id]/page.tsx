@@ -48,6 +48,7 @@ export default async function ProductDetailPage({ params }: Params) {
       <div style={{ background: "var(--color-surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", overflow: "hidden", marginBottom: "var(--space-6)" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)", fontVariantNumeric: "tabular-nums" }}>
           <thead><tr style={{ borderBottom: "1px solid var(--color-border)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--color-foreground-muted)", textTransform: "uppercase" }}>
+            <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center", width: 50 }}>STT</th>
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>Kho</th>
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>Lô</th>
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right" }}>SL</th>
@@ -56,9 +57,10 @@ export default async function ProductDetailPage({ params }: Params) {
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>HSD</th>
           </tr></thead>
           <tbody>
-            {product.inventory.length === 0 ? <tr><td colSpan={6} style={{ padding: "var(--space-6)", textAlign: "center", color: "var(--color-foreground-muted)" }}>Chưa có tồn kho</td></tr> :
+            {product.inventory.length === 0 ? <tr><td colSpan={7} style={{ padding: "var(--space-6)", textAlign: "center", color: "var(--color-foreground-muted)" }}>Chưa có tồn kho</td></tr> :
               product.inventory.map((inv, i) => (
                 <tr key={inv.id} style={{ borderBottom: i < product.inventory.length - 1 ? "1px solid var(--color-muted)" : "none", background: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-hover)" }}>
+                  <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>{i + 1}</td>
                   <td style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 500 }}>{inv.warehouse.code} — {inv.warehouse.name}</td>
                   <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center", fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)" }}>{inv.batchNumber || "—"}</td>
                   <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right", fontWeight: 600 }}>{inv.quantity}</td>
@@ -79,6 +81,7 @@ export default async function ProductDetailPage({ params }: Params) {
       <div style={{ background: "var(--color-surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", overflow: "hidden" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)" }}>
           <thead><tr style={{ borderBottom: "1px solid var(--color-border)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--color-foreground-muted)", textTransform: "uppercase" }}>
+            <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center", width: 50 }}>STT</th>
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>Loại</th>
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>Lý do</th>
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right" }}>SL</th>
@@ -87,9 +90,10 @@ export default async function ProductDetailPage({ params }: Params) {
             <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right" }}>Ngày</th>
           </tr></thead>
           <tbody>
-            {product.movements.length === 0 ? <tr><td colSpan={6} style={{ padding: "var(--space-6)", textAlign: "center", color: "var(--color-foreground-muted)" }}>Chưa có biến động</td></tr> :
+            {product.movements.length === 0 ? <tr><td colSpan={7} style={{ padding: "var(--space-6)", textAlign: "center", color: "var(--color-foreground-muted)" }}>Chưa có biến động</td></tr> :
               product.movements.map((m, i) => (
                 <tr key={m.id} style={{ borderBottom: i < product.movements.length - 1 ? "1px solid var(--color-muted)" : "none", background: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-hover)" }}>
+                  <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>{i + 1}</td>
                   <td style={{ padding: "var(--space-3) var(--space-4)" }}><span style={{ color: m.type === "IN" ? "var(--color-success)" : "var(--color-destructive)", fontWeight: 600 }}>{m.type === "IN" ? "Nhập" : "Xuất"}</span></td>
                   <td style={{ padding: "var(--space-3) var(--space-4)", fontSize: "var(--text-xs)" }}>{m.reason}</td>
                   <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right", fontWeight: 600 }}>{m.quantity}</td>

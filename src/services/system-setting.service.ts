@@ -6,18 +6,25 @@ export class SystemSettingService {
    * Lấy giá trị cấu hình hệ thống (Có Vercel Edge Caching)
    */
   static async get(key: string): Promise<string | null> {
-    const getCachedSetting = unstable_cache(
-      async (k: string) => {
-        const setting = await prisma.systemSetting.findUnique({
-          where: { key: k },
-        });
-        return setting?.value || null;
-      },
-      [`system-setting-${key}`], // Cache Key
-      { tags: ['system-settings', `system-setting-${key}`], revalidate: false } // Revalidate: false nghĩa là cache vĩnh viễn cho đến khi bị tag gọi xóa
-    );
-
-    return getCachedSetting(key);
+    try {
+      const getCachedSetting = unstable_cache(
+        async (k: string) => {
+          const setting = await prisma.systemSetting.findUnique({
+            where: { key: k },
+          });
+          return setting?.value || null;
+        },
+        [`system-setting-${key}`], // Cache Key
+        { tags: ['system-settings', `system-setting-${key}`], revalidate: false }
+      );
+      return await getCachedSetting(key);
+    } catch (err: any) {
+      // Fallback for Server Actions where unstable_cache might throw "incrementalCache missing"
+      const setting = await prisma.systemSetting.findUnique({
+        where: { key },
+      });
+      return setting?.value || null;
+    }
   }
 
   /**

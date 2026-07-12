@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
+
+// KHÔNG IMPORT useSession nữa
 
 interface MenuItem {
   icon: string;
@@ -18,15 +19,15 @@ interface MenuGroup {
   items: MenuItem[];
 }
 
-export function Sidebar() {
+// Sidebar nhận trực tiếp role và name từ Server Component truyền xuống
+export function Sidebar({ userRole, userName }: { userRole: string; userName: string }) {
   const pathname = usePathname();
-  const { data: session } = useSession();
-  const userRole = (session?.user as { role?: string } | undefined)?.role || "GUEST";
 
   const ALL_ROLES = ["ADMIN", "SALE", "ACCOUNTANT"];
   const ADMIN_ACC = ["ADMIN", "ACCOUNTANT"];
   const ADMIN_ONLY = ["ADMIN"];
 
+  // Giữ nguyên cấu trúc MENU
   const MENU: MenuGroup[] = [
     {
       title: "Kinh doanh",
@@ -100,7 +101,7 @@ export function Sidebar() {
 
       {/* User profile footer */}
       <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid rgba(255,255,255,0.08)", background: "rgba(0,0,0,0.15)" }}>
-        <p style={{ fontSize: "var(--text-sm)", fontWeight: 600, margin: 0, color: "white" }}>{session?.user?.name || "Người dùng"}</p>
+        <p style={{ fontSize: "var(--text-sm)", fontWeight: 600, margin: 0, color: "white" }}>{userName}</p>
         <p style={{ fontSize: "11px", color: "var(--color-foreground-subtle)", margin: 0 }}>{userRole}</p>
       </div>
     </aside>

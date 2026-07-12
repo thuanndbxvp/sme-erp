@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { requirePermission } from "@/lib/authorize";
-import { auditLog } from "@/lib/audit";
+import { AuditAndSecurityHelper } from "@/lib/audit";
 import { safeAction } from "@/lib/action-result";
 import { InventoryService } from "@/services/inventory.service";
 import { prisma } from "@/lib/prisma";
@@ -40,8 +40,8 @@ export async function adjustInventory(formData: FormData) {
     });
 
     const product = await prisma.product.findUnique({ where: { id: productId } });
-    await auditLog({
-      action: direction === "IN" ? "ADJUST_STOCK_IN" : "ADJUST_STOCK_OUT",
+    await AuditAndSecurityHelper.logAction({
+      action: "UPDATE",
       entityType: "Product",
       entityId: productId,
       userId: session?.user?.id,

@@ -39,30 +39,30 @@ export default function AdjustForm({ productId, warehouses }: Props) {
   const S: React.CSSProperties = { width: "100%", height: 36, padding: "0 8px", border: "1px solid var(--color-border-strong)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-sm)", fontFamily: "var(--font-sans)", background: "var(--color-surface)" };
 
   return (
-    <div style={{ marginBottom: "var(--space-6)" }}>
-      {!show ? (
-        <button onClick={() => setShow(true)} style={{ height: 36, padding: "0 14px", borderRadius: "var(--radius-md)", fontSize: "var(--text-xs)", fontWeight: 600, cursor: "pointer", border: "none", background: "var(--color-warning)", color: "white" }}>
-          ⚠ Điều chỉnh tồn kho
-        </button>
-      ) : (
-        <div style={{ background: "var(--color-warning-bg)", border: "1px solid var(--color-warning)", borderRadius: "var(--radius-lg)", padding: "var(--space-4)", maxWidth: 480 }}>
-          <h3 style={{ fontSize: "var(--text-base)", fontWeight: 700, marginBottom: "var(--space-3)", color: "var(--color-warning)" }}>Điều chỉnh tồn kho</h3>
+    <div style={{ position: "relative" }}>
+      <button onClick={() => setShow(!show)} style={{ height: 32, padding: "0 12px", borderRadius: "var(--radius-md)", fontSize: "var(--text-xs)", fontWeight: 600, cursor: "pointer", border: "1px solid var(--color-warning)", background: show ? "var(--color-warning)" : "var(--color-warning)10", color: show ? "white" : "var(--color-warning)", display: "flex", alignItems: "center", gap: 6, transition: "all 0.2s" }}>
+        ⚠ Điều chỉnh
+      </button>
+
+      {show && (
+        <div style={{ position: "absolute", top: "100%", right: 0, zIndex: 50, marginTop: "var(--space-2)", background: "var(--color-surface)", border: "2px solid var(--color-warning)", borderRadius: "var(--radius-lg)", padding: "var(--space-4)", width: 340, boxShadow: "var(--shadow-lg)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-3)" }}>
+             <h3 style={{ fontSize: "var(--text-base)", fontWeight: 700, margin: 0, color: "var(--color-warning)" }}>Điều chỉnh tồn kho</h3>
+             <button onClick={() => setShow(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "16px" }}>✕</button>
+          </div>
           {msg && <div style={{ padding: "var(--space-2)", background: msg.includes("Đã") ? "var(--color-success-bg)" : "var(--color-destructive-bg)", color: msg.includes("Đã") ? "var(--color-success)" : "var(--color-destructive)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", marginBottom: "var(--space-3)" }}>{msg}</div>}
           <div style={{ display: "grid", gap: "var(--space-2)" }}>
             <select value={direction} onChange={e => setDirection(e.target.value)} style={S}>
-              <option value="IN">➕ Nhập thêm (tăng tồn)</option>
-              <option value="OUT">➖ Xuất bớt (giảm tồn)</option>
+              <option value="IN">➕ Nhập thêm</option>
+              <option value="OUT">➖ Xuất bớt</option>
             </select>
             <select value={warehouseId} onChange={e => setWarehouseId(e.target.value)} style={S}>
-              {warehouses.map(w => <option key={w.id} value={w.id}>{w.code} — {w.name} (hiện có: {w.qty})</option>)}
+              {warehouses.map(w => <option key={w.id} value={w.id}>{w.code} (Tồn: {w.qty})</option>)}
             </select>
             <input type="number" min={1} value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="Số lượng" style={S} />
-            <input value={reason2} onChange={e => setReason2(e.target.value)} placeholder="Lý do: hàng hỏng, khuyến mãi, kiểm kê..." style={S} />
-            <input value={note} onChange={e => setNote(e.target.value)} placeholder="Ghi chú thêm" style={S} />
-            <div style={{ display: "flex", gap: "var(--space-2)" }}>
-              <button onClick={onSubmit} disabled={pending} style={{ height: 36, padding: "0 14px", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", fontWeight: 600, cursor: "pointer", border: "none", background: "var(--color-warning)", color: "white" }}>{pending ? "..." : "Xác nhận"}</button>
-              <button onClick={() => setShow(false)} style={{ height: 36, padding: "0 14px", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", fontWeight: 600, cursor: "pointer", border: "1px solid var(--color-border-strong)", background: "var(--color-surface)", color: "var(--color-foreground)" }}>Hủy</button>
-            </div>
+            <input value={reason2} onChange={e => setReason2(e.target.value)} placeholder="Lý do..." style={S} />
+            <input value={note} onChange={e => setNote(e.target.value)} placeholder="Ghi chú" style={S} />
+            <button onClick={onSubmit} disabled={pending} style={{ height: 36, width: "100%", marginTop: "var(--space-2)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-sm)", fontWeight: 700, cursor: "pointer", border: "none", background: "var(--color-warning)", color: "white" }}>{pending ? "..." : "Xác nhận điều chỉnh"}</button>
           </div>
         </div>
       )}

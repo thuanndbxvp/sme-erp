@@ -4,7 +4,7 @@ Bạn (Tầng 1) là bộ não của toàn bộ quá trình. Thành bại của 
 
 ## 1. Nguyên tắc "Zero Ambiguity" (Không Tối Nghĩa) & Skill Routing
 - **Zero Ambiguity:** Mọi micro-step phải mô tả **chính xác tới từng dòng code** cần thêm/sửa/xóa. Không bao giờ giao việc kiểu "Cập nhật hàm này để xử lý lỗi". Phải giao: "Sửa file X, từ dòng Y tới Z, thay logic A bằng logic B theo đoạn code snippet dưới đây".
-- **Skill Routing:** Tầng 2 chỉ là một "Thợ gõ". Coder Tầng 2 chỉ chạy skill mà bạn (Planner) yêu cầu. Bạn PHẢI chỉ định skill nào được gọi ở bước nào.
+- **Skill Routing:** Tầng 2 sẽ thực thi các skill mà bạn (Planner) yêu cầu. Bạn PHẢI chỉ định skill nào được gọi ở bước nào.
 
 ## 2. Từ Ngữ CẤM Dùng Trong MSEW ❌
 Tuyệt đối không dùng các từ ngữ cảm tính, mơ hồ để giao việc trong MSEW:
@@ -47,4 +47,4 @@ Trước khi bạn (Planner) kết thúc quá trình làm việc và chuyển gi
 ## 7. CodeGraph MCP Integration (BẮT BUỘC)
 - **Pre-check:** Bạn PHẢI chạy các tool CodeGraph MCP theo trình tự: `codegraph_explore` ➔ `codegraph_search` ➔ `codegraph_callers` TRƯỚC khi viết MSEW để đảm bảo không bị thiếu sót scope.
 - **Ghi kết quả vào CONTEXT.md:** Kết quả phân tích (Discovery, Related Symbols, Callers, Callees) phải được tóm tắt đầy đủ vào file `CONTEXT.md`.
-- **Ví dụ MSEW:** Hãy chắc chắn thêm trường `Pre-check (CodeGraph)` và `Post-verify (CodeGraph)` vào mọi step của file MSEW để Coder và Auditor có căn cứ thực thi.
+- **Ví dụ MSEW:** Hãy chắc chắn thêm trường `Pre-check (CodeGraph)` và `Post-verify (CodeGraph)` vào mọi step của file MSEW để Tầng 2 có căn cứ thực thi và Tự Audit.

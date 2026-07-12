@@ -60,7 +60,7 @@ export class OrderOrchestrator {
     return prisma.$transaction(async (tx) => {
       const purchaseOrder = await PurchaseOrderService.createInTx(tx, {
         supplierId: input.supplierId,
-        items: input.items.map((it) => ({ productId: it.productId, productName: it.productName, unit: it.unit, qty: it.qty, buyPrice: it.buyPrice, taxAmount: "0" })),
+        items: input.items.map((it) => ({ productId: it.productId, productName: it.productName, unit: it.unit, qty: it.qty, buyPrice: (it as any).buyPrice, taxAmount: (it as any).purchaseTaxAmount ?? "0" })),
         orderDate: input.saleDate,
       }, { userId: meta.userId, now, random });
 

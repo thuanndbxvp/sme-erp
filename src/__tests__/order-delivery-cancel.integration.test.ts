@@ -187,7 +187,7 @@ describeIf("P2-4: Hủy đơn — hoàn kho", () => {
     const po = await OrderOrchestrator.createDropshipOrder(
       {
         customerId, supplierId,
-        items: [{ productId: product1Id, productName: "SP1", unit: "cái", qty: 4, sellPrice: "3000", buyPrice: "2000", baseCost: "0", taxAmount: "0" }],
+        items: [{ productId: product1Id, productName: "SP1", unit: "cái", qty: 4, sellPrice: "3000", buyPrice: "2000", baseCost: "0", taxAmount: "0", purchaseTaxAmount: "0" }],
       },
       { now: new Date(), random: nextRandom() }, prisma,
     ).then(r => r.purchaseOrder);
@@ -207,7 +207,7 @@ describeIf("P2-4: Hủy đơn — hoàn kho", () => {
     const { salesOrder, purchaseOrder } = await OrderOrchestrator.createDropshipOrder(
       {
         customerId, supplierId,
-        items: [{ productId: product1Id, productName: "SP-DS", unit: "cái", qty: 3, sellPrice: "5000", buyPrice: "3000", baseCost: "0", taxAmount: "0" }],
+        items: [{ productId: product1Id, productName: "SP-DS", unit: "cái", qty: 3, sellPrice: "5000", buyPrice: "3000", baseCost: "0", taxAmount: "0", purchaseTaxAmount: "0" }],
       },
       { now: new Date(), random: nextRandom() }, prisma,
     );

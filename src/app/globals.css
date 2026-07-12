@@ -1,7 +1,7 @@
+@import "tailwindcss";
+
 /* SME ERP Design System — Exaggerated Minimalism + Swiss Style */
 /* Density: 8/10 (dashboard/data-dense) | Font: Inter */
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
   /* === COLOR TOKENS === */

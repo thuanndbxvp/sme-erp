@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { PlusIcon } from "@/components/ui/icons";
 import { Pagination } from "@/components/ui/Pagination";
+import AdjustForm from "@/components/inventory/AdjustForm";
+import QuickEditProductForm from "@/components/catalog/QuickEditProductForm";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +45,7 @@ export default async function ProductListPage({ searchParams }: Props) {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)", fontVariantNumeric: "tabular-nums" }}>
             <thead style={{ position: "sticky", top: 0, zIndex: 1 }}>
               <tr style={{ borderBottom: "1px solid var(--color-border)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--color-foreground-muted)", textTransform: "uppercase", letterSpacing: "0.05em", background: "var(--color-surface)" }}>
+                <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center", width: 50 }}>STT</th>
                 <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>SKU</th>
                 <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>Tên</th>
                 <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>ĐVT</th>
@@ -56,6 +59,7 @@ export default async function ProductListPage({ searchParams }: Props) {
                 const stock = stockMap.get(p2.id) ?? 0;
                 return (
                   <tr key={p2.id} style={{ borderBottom: i < products.length - 1 ? "1px solid var(--color-muted)" : "none", background: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-hover)" }}>
+                    <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>{(p - 1) * PAGE_SIZE + i + 1}</td>
                     <td style={{ padding: "var(--space-3) var(--space-4)", fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)" }}>{p2.sku}</td>
                     <td style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 500 }}><Link href={`/products/${p2.id}`} style={{ color: "var(--color-primary)", textDecoration: "none" }}>{p2.name}</Link></td>
                     <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>{p2.unit}</td>
@@ -63,9 +67,25 @@ export default async function ProductListPage({ searchParams }: Props) {
                     <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>
                       <span style={{ display: "inline-block", padding: "2px 10px", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", fontWeight: 700, background: stock > 0 ? "var(--color-success-bg)" : "var(--color-muted)", color: stock > 0 ? "var(--color-success)" : "var(--color-foreground-muted)" }}>{stock}</span>
                     </td>
-                    <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center", whiteSpace: "nowrap" }}>
-                      <Link href={`/products/${p2.id}`}><Button variant="ghost" size="sm">Xem</Button></Link>
-                      <Link href={`/catalog/product/${p2.id}/edit`}><Button variant="ghost" size="sm">Sửa</Button></Link>
+                    <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right", whiteSpace: "nowrap" }}>
+                      <div style={{ display: "flex", gap: "var(--space-2)", justifyContent: "flex-end", alignItems: "center" }}>
+                        <Link href={`/products/${p2.id}`}>
+                          <button style={{ height: 32, padding: "0 12px", borderRadius: "var(--radius-md)", fontSize: "var(--text-xs)", fontWeight: 600, cursor: "pointer", border: "1px solid var(--color-primary)", background: "var(--color-surface)", color: "var(--color-primary)", display: "flex", alignItems: "center", gap: 6 }}>
+                            👁 Xem
+                          </button>
+                        </Link>
+                        <QuickEditProductForm product={{
+                          id: p2.id,
+                          name: p2.name,
+                          unit: p2.unit,
+                          buyPrice: Number(p2.buyPrice),
+                          sellPrice: Number(p2.sellPrice)
+                        }} />
+                        <AdjustForm
+                          productId={p2.id}
+                          warehouses={p2.inventory.map(inv => ({ id: inv.warehouseId, code: inv.warehouse.code, name: inv.warehouse.name, qty: inv.quantity }))}
+                        />
+                      </div>
                     </td>
                   </tr>
                 );

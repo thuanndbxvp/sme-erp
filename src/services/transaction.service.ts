@@ -132,4 +132,66 @@ export class TransactionService {
       TransactionService.recordTransaction(tx, input),
     );
   }
+
+  /**
+   * Xóa giao dịch thủ công (không gắn Order). Hoàn tác balance trước khi xóa.
+   * Chỉ áp dụng cho giao dịch không liên kết salesOrderId/purchaseOrderId.
+   */
+  static async deleteTransaction(
+    id: string,
+    prisma: PrismaClient = defaultPrisma,
+  ) {
+    await AuditAndSecurityHelper.assertNotPeriodLocked(new Date());
+
+    return prisma.$transaction(
+      async (tx) => {
+        const existing = await tx.transaction.findUnique({ where: { id } });
+        if (!existing) {
+          throw new NotFoundError("Transaction", id);
+        }
+        if (existing.salesOrderId || existing.purchaseOrderId) {
+          throw new ValidationError(
+            "Không thể xóa giao dịch đã gắn với đơn hàng (chỉ xóa giao dịch thủ công)",
+          );
+        }
+
+        const amount = Money.of(existing.amount.toString());
+
+        // SELECT ... FOR UPDATE account
+        const locked = await tx.$queryRaw<
+          Array<{ id: string; code: string; name: string; balance: Prisma.Decimal }>
+        >`SELECT "id", "code", "name", "balance" FROM "Account" WHERE "id" = ${existing.accountId} FOR UPDATE`;
+        const account = locked[0];
+        if (!account) {
+          throw new NotFoundError("Account", existing.accountId);
+        }
+
+        const oldBalance = Money.of(account.balance.toString());
+        // Revert: INCOME đã cộng → giờ trừ; EXPENSE đã trừ → giờ cộng
+        const newBalance =
+          existing.type === TRANSACTION_TYPE.INCOME
+            ? oldBalance.sub(amount)
+            : oldBalance.add(amount);
+
+        await tx.account.update({
+          where: { id: account.id },
+          data: { balance: newBalance.toDecimalString() },
+        });
+
+        await tx.transaction.delete({ where: { id } });
+
+        AuditAndSecurityHelper.logAction({
+          action: "DELETE",
+          entityType: "TRANSACTION",
+          entityId: id,
+          metadata: {
+            type: existing.type,
+            amount: existing.amount.toString(),
+            accountId: existing.accountId,
+          },
+        });
+      },
+      { maxWait: 15_000, timeout: 20_000 },
+    );
+  }
 }
