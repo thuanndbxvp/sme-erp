@@ -69,6 +69,10 @@ export async function updateRolePermissions(formData: FormData) {
   await checkAdmin(session);
   return safeAction(async () => {
     const roleId = formData.get("roleId") as string;
+    const role = await prisma.role.findUnique({ where: { id: roleId } });
+    if (role?.name === "ADMIN") {
+      throw new Error("Không thể thay đổi quyền của vai trò mặc định (ADMIN).");
+    }
     const permIds = formData.getAll("permissionIds") as string[];
     await prisma.rolePermission.deleteMany({ where: { roleId } });
     await prisma.rolePermission.createMany({ data: permIds.map(pid => ({ roleId, permissionId: pid })) });

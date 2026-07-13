@@ -125,7 +125,8 @@ export default function RolesClient({ roles, permissions, users }: { roles: any[
                 </td>
                 <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center", fontWeight: 600 }}>{r._count.users}</td>
                 <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>
-                  {editPerms !== r.id && <button onClick={() => startEditPerms(r)} style={btnSm}>Sửa quyền</button>}
+                  {editPerms !== r.id && r.name !== "ADMIN" && <button onClick={() => startEditPerms(r)} style={btnSm}>Sửa quyền</button>}
+                  {r.name === "ADMIN" && <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted-foreground)", opacity: 0.5 }}>Mặc định</span>}
                 </td>
               </tr>
             ))}
