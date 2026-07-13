@@ -4,8 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// KHÔNG IMPORT useSession nữa
-
 interface MenuItem {
   icon: string;
   label: string;
@@ -19,7 +17,6 @@ interface MenuGroup {
   items: MenuItem[];
 }
 
-// Sidebar nhận trực tiếp role và name từ Server Component truyền xuống
 export function Sidebar({ userRole, userName }: { userRole: string; userName: string }) {
   const pathname = usePathname();
 
@@ -32,39 +29,30 @@ export function Sidebar({ userRole, userName }: { userRole: string; userName: st
       title: "Tổng quan",
       items: [
         { icon: "🏠", label: "Trung tâm Điều hành", href: "/", active: pathname === "/", allowedRoles: ALL_ROLES },
+        { icon: "📈", label: "Báo cáo tổng quan", href: "/reports", active: pathname.startsWith("/reports"), allowedRoles: ADMIN_ONLY },
       ],
     },
     {
-      title: "Kinh doanh",
+      title: "Kinh doanh & Đối tác",
       items: [
         { icon: "📋", label: "Đơn hàng", href: "/orders", active: pathname.startsWith("/orders"), allowedRoles: ALL_ROLES },
-      ],
-    },
-    {
-      title: "Tài chính",
-      items: [
-        { icon: "💵", label: "Sổ quỹ / Tài chính", href: "/cashflow", active: pathname.startsWith("/cashflow"), allowedRoles: ADMIN_ACC },
-        { icon: "📊", label: "Công nợ", href: "/debts", active: pathname.startsWith("/debts"), allowedRoles: ADMIN_ACC },
-      ],
-    },
-    {
-      title: "Kho hàng",
-      items: [
-        { icon: "📦", label: "Sản phẩm & Tồn kho", href: "/catalog/product", active: pathname.startsWith("/catalog/product") || pathname.startsWith("/products/"), allowedRoles: ALL_ROLES },
-        { icon: "🏗️", label: "Quản lý kho", href: "/catalog/warehouse", active: pathname.startsWith("/catalog/warehouse"), allowedRoles: ALL_ROLES },
-      ],
-    },
-    {
-      title: "Đối tác",
-      items: [
         { icon: "👥", label: "Khách hàng", href: "/catalog/customer", active: pathname.startsWith("/catalog/customer") || pathname.startsWith("/customers/"), allowedRoles: ALL_ROLES },
         { icon: "🏭", label: "Nhà cung cấp", href: "/catalog/supplier", active: pathname.startsWith("/catalog/supplier") || pathname.startsWith("/suppliers/"), allowedRoles: ALL_ROLES },
       ],
     },
     {
-      title: "Báo cáo",
+      title: "Sản phẩm & Tồn kho",
       items: [
-        { icon: "📈", label: "Báo cáo tổng quan", href: "/reports", active: pathname.startsWith("/reports"), allowedRoles: ADMIN_ONLY },
+        { icon: "📦", label: "Danh mục Sản phẩm", href: "/catalog/product", active: pathname.startsWith("/catalog/product") || pathname.startsWith("/products/"), allowedRoles: ALL_ROLES },
+        { icon: "🏗️", label: "Quản lý kho", href: "/catalog/warehouse", active: pathname.startsWith("/catalog/warehouse"), allowedRoles: ALL_ROLES },
+      ],
+    },
+    {
+      title: "Tài chính & Nhân sự",
+      items: [
+        { icon: "💵", label: "Sổ quỹ / Dòng tiền", href: "/cashflow", active: pathname.startsWith("/cashflow"), allowedRoles: ADMIN_ACC },
+        { icon: "📊", label: "Quản lý công nợ", href: "/debts", active: pathname.startsWith("/debts"), allowedRoles: ADMIN_ACC },
+        { icon: "💼", label: "Hồ sơ & Lương", href: "/hr/employees", active: pathname.startsWith("/hr"), allowedRoles: ADMIN_ONLY },
       ],
     },
     {
@@ -72,14 +60,8 @@ export function Sidebar({ userRole, userName }: { userRole: string; userName: st
       items: [
         { icon: "👤", label: "Người dùng", href: "/users", active: pathname.startsWith("/users"), allowedRoles: ADMIN_ONLY },
         { icon: "🔐", label: "Phân quyền", href: "/roles", active: pathname.startsWith("/roles"), allowedRoles: ADMIN_ONLY },
-        { icon: "📜", label: "Nhật ký", href: "/audit", active: pathname.startsWith("/audit"), allowedRoles: ADMIN_ONLY },
+        { icon: "📜", label: "Nhật ký hệ thống", href: "/audit", active: pathname.startsWith("/audit"), allowedRoles: ADMIN_ONLY },
         { icon: "⚙️", label: "Hồ sơ cá nhân", href: "/profile", active: pathname.startsWith("/profile"), allowedRoles: ALL_ROLES },
-      ],
-    },
-    {
-      title: "Nhân sự",
-      items: [
-        { icon: "💼", label: "Hồ sơ & Lương", href: "/hr/employees", active: pathname.startsWith("/hr"), allowedRoles: ADMIN_ONLY },
       ],
     },
   ];
