@@ -77,6 +77,8 @@ export class SalesOrderService {
         saleDate: input.saleDate ?? now,
         totalAmount: totalAmount.toDecimalString(),
         taxAmount: taxTotal.toDecimalString(),
+        // MSEW-payroll-hr: hoa hồng dự kiến (VND), status mặc định = PENDING từ schema.
+        commissionAmount: Money.of(input.commissionAmount ?? "0").toDecimalString(),
         items: { create: items },
       },
       include: { items: true },

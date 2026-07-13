@@ -91,6 +91,7 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
   const [receivedDate, setReceivedDate] = useState("");
   const [salespersonId, setSalespersonId] = useState("");
   const [commissionRate, setCommissionRate] = useState("0");
+  const [commissionAmount, setCommissionAmount] = useState("0"); // MSEW-payroll-hr: hoa hồng cố định
   const [notes, setNotes] = useState("");
 
   // Purchase payment (DROPSHIP/IMPORT)
@@ -162,6 +163,7 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
       fd.set("expectedDate", expectedDate);
       fd.set("notes", notes);
       fd.set("commissionRate", commissionRate);
+      fd.set("commissionAmount", String(Number(String(commissionAmount).replace(/\D/g, "")) || 0));
       fd.set("saleTaxRate", saleTaxRate);
       fd.set("purchaseTaxRate", purchaseTaxRate);
       if (purchasePayment) { fd.set("purchasePaidAmount", purchasePayment.paidAmount); fd.set("purchaseAccountId", purchasePayment.accountId); }
@@ -268,6 +270,7 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)", marginBottom: "var(--space-3)" }}>
               <div><label style={labelS}>Người bán</label><input placeholder="User ID" value={salespersonId} onChange={e => setSalespersonId(e.target.value)} style={S} /></div>
               <div><label style={labelS}>Hoa hồng (%)</label><input type="number" value={commissionRate} onChange={e => setCommissionRate(e.target.value)} style={S} /></div>
+              <div><label style={labelS}>Hoa hồng cố định (VND)</label><input type="text" inputMode="numeric" value={fmtVND(commissionAmount)} onChange={e => setCommissionAmount(e.target.value.replace(/\D/g, ""))} placeholder="0" style={S} /></div>
             </div>
 
             <div style={{ marginBottom: "var(--space-3)" }}>

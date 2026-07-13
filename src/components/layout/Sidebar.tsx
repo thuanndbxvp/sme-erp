@@ -76,6 +76,12 @@ export function Sidebar({ userRole, userName }: { userRole: string; userName: st
         { icon: "⚙️", label: "Hồ sơ cá nhân", href: "/profile", active: pathname.startsWith("/profile"), allowedRoles: ALL_ROLES },
       ],
     },
+    {
+      title: "Nhân sự",
+      items: [
+        { icon: "💼", label: "Hồ sơ & Lương", href: "/hr/employees", active: pathname.startsWith("/hr"), allowedRoles: ADMIN_ONLY },
+      ],
+    },
   ];
 
   return (

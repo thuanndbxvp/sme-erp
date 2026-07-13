@@ -1,4 +1,4 @@
-import { config } from "dotenv";
+﻿import { config } from "dotenv";
 config();
 
 import { PrismaClient } from "@prisma/client";
@@ -36,30 +36,30 @@ async function cleanup() {
   await prisma.account.deleteMany({ where: { code: { contains: TAG } } });
 }
 
-describeIf("P3-3 Reconciliation (đối soát)", () => {
+describeIf("P3-3 Reconciliation (Ä‘á»‘i soÃ¡t)", () => {
   beforeAll(async () => {
     await cleanup();
     accountId = (await prisma.account.create({ data: { code: `${TAG}-BANK`, name: "Bank" } })).id;
     customerId = (await prisma.customer.create({ data: { name: `${TAG}-KH` } })).id;
-    await prisma.supplier.create({ data: { name: `${TAG}-NCC` } }); // tạo sẵn NCC cho AP test
+    await prisma.supplier.create({ data: { name: `${TAG}-NCC` } }); // táº¡o sáºµn NCC cho AP test
     warehouseId = (await prisma.warehouse.create({ data: { code: `${TAG}-WH`, name: "Kho" } })).id;
   });
   afterAll(async () => { await cleanup(); await prisma.$disconnect(); });
 
-  it("đối soát N-N: 1 payment áp vào 2 invoice, getPaymentsForOrder khớp", async () => {
-    // Tạo 2 SO → 2 AR Invoice
+  it("Ä‘á»‘i soÃ¡t N-N: 1 payment Ã¡p vÃ o 2 invoice, getPaymentsForOrder khá»›p", async () => {
+    // Táº¡o 2 SO â†’ 2 AR Invoice
     const so1 = await OrderOrchestrator.createWarehouseOrder(
-      { customerId, warehouseId, fulfillmentType: "WAREHOUSE", items: [{ productName: "A", unit: "cái", qty: 1, sellPrice: "100000", baseCost: "0", taxAmount: "0" }] },
+      { customerId, warehouseId, fulfillmentType: "WAREHOUSE", commissionAmount: "0", items: [{ productName: "A", unit: "cÃ¡i", qty: 1, sellPrice: "100000", baseCost: "0", taxAmount: "0" }] },
       { now: new Date(), random: nextRandom() }, prisma,
     );
     const so2 = await OrderOrchestrator.createWarehouseOrder(
-      { customerId, warehouseId, fulfillmentType: "WAREHOUSE", items: [{ productName: "B", unit: "cái", qty: 1, sellPrice: "50000", baseCost: "0", taxAmount: "0" }] },
+      { customerId, warehouseId, fulfillmentType: "WAREHOUSE", commissionAmount: "0", items: [{ productName: "B", unit: "cÃ¡i", qty: 1, sellPrice: "50000", baseCost: "0", taxAmount: "0" }] },
       { now: new Date(), random: nextRandom() }, prisma,
     );
     const inv1 = await prisma.invoice.findUniqueOrThrow({ where: { salesOrderId: so1.id } });
     const inv2 = await prisma.invoice.findUniqueOrThrow({ where: { salesOrderId: so2.id } });
 
-    // 1 payment 120k áp vào 2 invoice: inv1=80k, inv2=40k
+    // 1 payment 120k Ã¡p vÃ o 2 invoice: inv1=80k, inv2=40k
     await PaymentService.recordPayment({
       direction: PAYMENT_DIRECTION.IN, amount: "120000", accountId, customerId,
       applications: [
@@ -68,25 +68,25 @@ describeIf("P3-3 Reconciliation (đối soát)", () => {
       ],
     }, prisma);
 
-    // Đối soát: payments cho SO1
+    // Äá»‘i soÃ¡t: payments cho SO1
     const m1 = await ReconciliationService.getPaymentsForOrder(so1.id, prisma);
     expect(m1).toHaveLength(1);
     expect(m1[0]!.appliedAmount).toBe("80000.00");
     expect(m1[0]!.orderCode).toBe(so1.orderCode);
 
-    // Đối soát: payments cho SO2
+    // Äá»‘i soÃ¡t: payments cho SO2
     const m2 = await ReconciliationService.getPaymentsForOrder(so2.id, prisma);
     expect(m2).toHaveLength(1);
     expect(m2[0]!.appliedAmount).toBe("40000.00");
 
-    // Cùng 1 paymentId (N-N)
+    // CÃ¹ng 1 paymentId (N-N)
     expect(m1[0]!.paymentId).toBe(m2[0]!.paymentId);
   });
 
-  it("getOutstandingAR: chỉ trả invoice còn balanceDue > 0", async () => {
-    // Tạo SO, thanh toán 1 phần
+  it("getOutstandingAR: chá»‰ tráº£ invoice cÃ²n balanceDue > 0", async () => {
+    // Táº¡o SO, thanh toÃ¡n 1 pháº§n
     const so = await OrderOrchestrator.createWarehouseOrder(
-      { customerId, warehouseId, fulfillmentType: "WAREHOUSE", items: [{ productName: "C", unit: "cái", qty: 1, sellPrice: "200000", baseCost: "0", taxAmount: "0" }] },
+      { customerId, warehouseId, fulfillmentType: "WAREHOUSE", commissionAmount: "0", items: [{ productName: "C", unit: "cÃ¡i", qty: 1, sellPrice: "200000", baseCost: "0", taxAmount: "0" }] },
       { now: new Date(), random: nextRandom() }, prisma,
     );
     const inv = await prisma.invoice.findUniqueOrThrow({ where: { salesOrderId: so.id } });
@@ -102,8 +102,9 @@ describeIf("P3-3 Reconciliation (đối soát)", () => {
     expect(match!.paidAmount).toBe("50000.00");
   });
 
-  it("verifyNoOverpayments: 0 vi phạm sau các thao tác bình thường", async () => {
+  it("verifyNoOverpayments: 0 vi pháº¡m sau cÃ¡c thao tÃ¡c bÃ¬nh thÆ°á»ng", async () => {
     const bad = await ReconciliationService.verifyNoOverpayments(prisma);
     expect(bad).toHaveLength(0);
   });
 });
+

@@ -32,6 +32,7 @@ export async function createWarehouseOrder(formData: FormData) {
     fulfillmentType: FULFILLMENT_TYPE.WAREHOUSE,
     salespersonId: (formData.get("salespersonId") as string) || undefined,
     saleDate: formData.get("saleDate") ? new Date(formData.get("saleDate") as string) : undefined,
+    commissionAmount: (formData.get("commissionAmount") as string) || "0",
     items: JSON.parse(formData.get("items") as string),
   };
   const salePayment = parsePayment(formData, "sale");
@@ -75,6 +76,7 @@ export async function createDropshipOrder(formData: FormData) {
     supplierId: formData.get("supplierId") as string,
     salespersonId: (formData.get("salespersonId") as string) || undefined,
     saleDate: formData.get("saleDate") ? new Date(formData.get("saleDate") as string) : undefined,
+    commissionAmount: (formData.get("commissionAmount") as string) || "0",
     items: JSON.parse(formData.get("items") as string),
   };
   const purchasePayment = parsePayment(formData, "purchase");
@@ -238,6 +240,7 @@ export async function createUnifiedOrder(formData: FormData) {
         fulfillmentType: FULFILLMENT_TYPE.WAREHOUSE,
         salespersonId: (formData.get("salespersonId") as string) || undefined,
         saleDate: formData.get("saleDate") ? new Date(formData.get("saleDate") as string) : undefined,
+        commissionAmount: (formData.get("commissionAmount") as string) || "0",
         items: processedItems,
       }, { userId: session?.user?.id, now: new Date(), random: Math.random() });
 
@@ -255,6 +258,7 @@ export async function createUnifiedOrder(formData: FormData) {
       supplierId: formData.get("supplierId") as string,
       salespersonId: (formData.get("salespersonId") as string) || undefined,
       saleDate: formData.get("saleDate") ? new Date(formData.get("saleDate") as string) : undefined,
+      commissionAmount: (formData.get("commissionAmount") as string) || "0",
       items: processedItems,
     }, { userId: session?.user?.id, now: new Date(), random: Math.random() });
 

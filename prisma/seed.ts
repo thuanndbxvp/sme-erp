@@ -23,6 +23,9 @@ const PERMISSION_CODES = [
   "cashflow.transaction.delete",
   "inventory.adjust",
   "users.delete", // Xóa cứng người dùng (MSEW-user-management-ui)
+  "hr.view",        // Xem danh sách nhân viên & bảng lương (MSEW-payroll-hr)
+  "hr.manage",      // Cấp tạm ứng, chỉnh sửa lương cứng (MSEW-payroll-hr)
+  "commission.approve", // Duyệt hoa hồng đơn hàng (MSEW-payroll-hr)
 ] as const;
 
 async function main() {

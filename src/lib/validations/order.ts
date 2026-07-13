@@ -37,6 +37,8 @@ export const createSalesOrderSchema = z.object({
   salespersonId: z.string().min(1).optional(),
   saleDate: z.coerce.date().optional(),
   note: optionalSafeString, // XSS-safe — chống <script> injection
+  /** MSEW-payroll-hr: hoa hồng dự kiến (VND). Trạng thái mặc định = PENDING. */
+  commissionAmount: moneySchema.default("0"),
   items: z.array(salesOrderItemInput).min(1, "Đơn phải có ít nhất 1 dòng"),
 });
 
@@ -76,6 +78,8 @@ export const createDropshipOrderSchema = z.object({
   salespersonId: z.string().min(1).optional(),
   saleDate: z.coerce.date().optional(),
   note: optionalSafeString, // XSS-safe
+  /** MSEW-payroll-hr: hoa hồng dự kiến (VND). */
+  commissionAmount: moneySchema.default("0"),
   items: z.array(dropshipItemInput).min(1, "Đơn phải có ít nhất 1 dòng"),
 });
 

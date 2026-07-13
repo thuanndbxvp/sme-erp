@@ -1,6 +1,6 @@
-/**
- * Integration test Phase 4 — Báo cáo. BASELINE TÍNH TAY (Mục F: không so output cũ).
- * Tạo dữ liệu cố định, chạy report, khớp baseline.
+﻿/**
+ * Integration test Phase 4 â€” BÃ¡o cÃ¡o. BASELINE TÃNH TAY (Má»¥c F: khÃ´ng so output cÅ©).
+ * Táº¡o dá»¯ liá»‡u cá»‘ Ä‘á»‹nh, cháº¡y report, khá»›p baseline.
  */
 import { config } from "dotenv";
 config();
@@ -48,28 +48,30 @@ describeIf("Phase 4 Reports (baseline tinh tay)", () => {
   });
   afterAll(async () => { await cleanup(); await prisma.$disconnect(); });
 
-  it("P4-1 P&L: revenue, COGS, chi phí khớp baseline tính tay", async () => {
+  it("P4-1 P&L: revenue, COGS, chi phÃ­ khá»›p baseline tÃ­nh tay", async () => {
     // Seed: 2 orders DELIVERED
-    // SO1: items: sellPrice=100 qty=2 → sellTotal=200, baseCost=60 → COGS=120, profit=80
-    // SO2: items: sellPrice=50 qty=3 → sellTotal=150, baseCost=30 → COGS=90,  profit=60
-    // TỔNG revenue=350, COGS=210, grossProfit=140
-    // Chi phí: 1 Transaction EXPENSE 50
+    // SO1: items: sellPrice=100 qty=2 â†’ sellTotal=200, baseCost=60 â†’ COGS=120, profit=80
+    // SO2: items: sellPrice=50 qty=3 â†’ sellTotal=150, baseCost=30 â†’ COGS=90,  profit=60
+    // Tá»”NG revenue=350, COGS=210, grossProfit=140
+    // Chi phÃ­: 1 Transaction EXPENSE 50
     // netProfit = 140 - 50 = 90
 
     const so1 = await OrderOrchestrator.createWarehouseOrder({
       customerId, warehouseId, fulfillmentType: "WAREHOUSE",
-      items: [{ productName: "A", unit: "cái", qty: 2, sellPrice: "100", baseCost: "60", taxAmount: "0" }],
+        commissionAmount: "0",
+      items: [{ productName: "A", unit: "cÃ¡i", qty: 2, sellPrice: "100", baseCost: "60", taxAmount: "0" }],
     }, { now: new Date(), random: nextRandom() }, prisma);
     const so2 = await OrderOrchestrator.createWarehouseOrder({
       customerId, warehouseId, fulfillmentType: "WAREHOUSE",
-      items: [{ productName: "B", unit: "cái", qty: 3, sellPrice: "50", baseCost: "30", taxAmount: "0" }],
+        commissionAmount: "0",
+      items: [{ productName: "B", unit: "cÃ¡i", qty: 3, sellPrice: "50", baseCost: "30", taxAmount: "0" }],
     }, { now: new Date(), random: nextRandom() }, prisma);
 
-    // Giao hàng cả 2
+    // Giao hÃ ng cáº£ 2
     await OrderOrchestrator.deliverSalesOrder(so1.id, {}, prisma);
     await OrderOrchestrator.deliverSalesOrder(so2.id, {}, prisma);
 
-    // Set profit cho items (chốt lúc giao) — P2-3 chưa tự calculate
+    // Set profit cho items (chá»‘t lÃºc giao) â€” P2-3 chÆ°a tá»± calculate
     for (const soId of [so1.id, so2.id]) {
       const items = await prisma.salesOrderItem.findMany({ where: { salesOrderId: soId } });
       for (const it of items) {
@@ -78,9 +80,9 @@ describeIf("Phase 4 Reports (baseline tinh tay)", () => {
       }
     }
 
-    // Chi phí: Transaction EXPENSE 50 (có TAG để filter không lẫn test khác)
+    // Chi phÃ­: Transaction EXPENSE 50 (cÃ³ TAG Ä‘á»ƒ filter khÃ´ng láº«n test khÃ¡c)
     await prisma.transaction.create({
-      data: { type: TRANSACTION_TYPE.EXPENSE, amount: "50", accountId, cashFlowGroup: "OPERATIONAL", description: `${TAG} Điện nước` },
+      data: { type: TRANSACTION_TYPE.EXPENSE, amount: "50", accountId, cashFlowGroup: "OPERATIONAL", description: `${TAG} Äiá»‡n nÆ°á»›c` },
     });
 
     // Filter ONLY transactions with TAG for this P&L test
@@ -99,26 +101,27 @@ describeIf("Phase 4 Reports (baseline tinh tay)", () => {
     expect(pl.revenue).toBe("350.00");
     expect(pl.cogs).toBe("210.00");
     expect(pl.grossProfit).toBe("140.00");
-    expect(expenses.toDecimalString()).toBe("50.00"); // TAG-filtered chỉ 1 expense
+    expect(expenses.toDecimalString()).toBe("50.00"); // TAG-filtered chá»‰ 1 expense
     expect(netProfit.toDecimalString()).toBe("90.00"); // 140 - 50
     expect(pl.orderCount).toBe(2);
   });
 
-  it("P4-2 Sổ quỹ: income/expense/closing khớp", async () => {
+  it("P4-2 Sá»• quá»¹: income/expense/closing khá»›p", async () => {
     const cf = await getCashFlow({}, prisma);
     const bank = cf.find((c) => c.accountId === accountId);
     expect(bank).toBeDefined();
-    // Account này có 1 INCOME (từ payment test trước đó?) + EXPENSE 50 từ test trên
-    // Không tính closing cụ thể vì có dữ liệu từ test trước; chỉ verify field có mặt
+    // Account nÃ y cÃ³ 1 INCOME (tá»« payment test trÆ°á»›c Ä‘Ã³?) + EXPENSE 50 tá»« test trÃªn
+    // KhÃ´ng tÃ­nh closing cá»¥ thá»ƒ vÃ¬ cÃ³ dá»¯ liá»‡u tá»« test trÆ°á»›c; chá»‰ verify field cÃ³ máº·t
     expect(bank!.code).toBe(`${TAG}-BANK`);
     expect(Number(bank!.totalExpense)).toBeGreaterThanOrEqual(50);
   });
 
-  it("P4-3 Công nợ AR: khớp baseline tính tay", async () => {
-    // SO3: 100k, thanh toán 30k → balanceDue = 70k
+  it("P4-3 CÃ´ng ná»£ AR: khá»›p baseline tÃ­nh tay", async () => {
+    // SO3: 100k, thanh toÃ¡n 30k â†’ balanceDue = 70k
     const so3 = await OrderOrchestrator.createWarehouseOrder({
       customerId, warehouseId, fulfillmentType: "WAREHOUSE",
-      items: [{ productName: "C", unit: "cái", qty: 1, sellPrice: "100000", baseCost: "0", taxAmount: "0" }],
+        commissionAmount: "0",
+      items: [{ productName: "C", unit: "cÃ¡i", qty: 1, sellPrice: "100000", baseCost: "0", taxAmount: "0" }],
     }, { now: new Date(), random: nextRandom() }, prisma);
     const inv = await prisma.invoice.findUniqueOrThrow({ where: { salesOrderId: so3.id } });
     await PaymentService.recordPayment({
@@ -134,7 +137,7 @@ describeIf("Phase 4 Reports (baseline tinh tay)", () => {
     expect(match!.balanceDue).toBe("70000.00");
   });
 
-  it("P4-4 Bán hàng theo SP: qty, revenue, profit khớp", async () => {
+  it("P4-4 BÃ¡n hÃ ng theo SP: qty, revenue, profit khá»›p", async () => {
     const r = await getSalesReport({}, prisma);
     // find product "A" from test above: qty=2, revenue=200, profit=80
     const a = r.byProduct.find((p) => p.productName === "A");
@@ -150,3 +153,4 @@ describeIf("Phase 4 Reports (baseline tinh tay)", () => {
     expect(b!.profit).toBe("60.00");
   });
 });
+

@@ -1,11 +1,11 @@
-/**
- * Integration test OrderOrchestrator (P2-2, invariant C5) — DB THẬT (Neon).
+﻿/**
+ * Integration test OrderOrchestrator (P2-2, invariant C5) â€” DB THáº¬T (Neon).
  *
  * AC:
- * - tạo WAREHOUSE thành công (SO PENDING, không PO).
- * - tạo DROPSHIP thành công: PO (ORDERED) + SO link linkedPurchaseOrderId đúng.
- * - ROLLBACK nguyên vẹn: 1 bước lỗi (customerId FK sai) → KHÔNG còn PO lẫn SO.
- * Tự skip nếu không có DATABASE_URL.
+ * - táº¡o WAREHOUSE thÃ nh cÃ´ng (SO PENDING, khÃ´ng PO).
+ * - táº¡o DROPSHIP thÃ nh cÃ´ng: PO (ORDERED) + SO link linkedPurchaseOrderId Ä‘Ãºng.
+ * - ROLLBACK nguyÃªn váº¹n: 1 bÆ°á»›c lá»—i (customerId FK sai) â†’ KHÃ”NG cÃ²n PO láº«n SO.
+ * Tá»± skip náº¿u khÃ´ng cÃ³ DATABASE_URL.
  */
 import { config } from "dotenv";
 config();
@@ -61,12 +61,13 @@ describeIf("OrderOrchestrator integration (C5)", () => {
     await prisma.$disconnect();
   });
 
-  it("WAREHOUSE: tạo SO PENDING, không sinh PO", async () => {
+  it("WAREHOUSE: táº¡o SO PENDING, khÃ´ng sinh PO", async () => {
     const so = await OrderOrchestrator.createWarehouseOrder(
       {
         customerId,
         fulfillmentType: "WAREHOUSE",
-        items: [{ productName: "SP1", unit: "cái", qty: 2, sellPrice: "10000", baseCost: "6000", taxAmount: "0" }],
+        commissionAmount: "0",
+        items: [{ productName: "SP1", unit: "cÃ¡i", qty: 2, sellPrice: "10000", baseCost: "6000", taxAmount: "0" }],
       },
       { now: new Date(), random: nextRandom() },
       prisma,
@@ -77,15 +78,16 @@ describeIf("OrderOrchestrator integration (C5)", () => {
     expect(so.totalAmount.toString()).toBe("20000");
   });
 
-  it("DROPSHIP: tạo PO (ORDERED) + SO link đúng, cùng transaction", async () => {
+  it("DROPSHIP: táº¡o PO (ORDERED) + SO link Ä‘Ãºng, cÃ¹ng transaction", async () => {
     const { salesOrder, purchaseOrder } = await OrderOrchestrator.createDropshipOrder(
       {
         customerId,
         supplierId,
+        commissionAmount: "0",
         items: [
           {
             productName: "SP-DS",
-            unit: "cái",
+            unit: "cÃ¡i",
             qty: 5,
             sellPrice: "12000",
             baseCost: "0",
@@ -105,7 +107,7 @@ describeIf("OrderOrchestrator integration (C5)", () => {
     expect(salesOrder.linkedPurchaseOrderId).toBe(purchaseOrder.id);
     expect(salesOrder.totalAmount.toString()).toBe("60000"); // 5*12000
 
-    // Verify từ DB độc lập: cả 2 tồn tại, link khớp
+    // Verify tá»« DB Ä‘á»™c láº­p: cáº£ 2 tá»“n táº¡i, link khá»›p
     const soDb = await prisma.salesOrder.findUniqueOrThrow({ where: { id: salesOrder.id } });
     const poDb = await prisma.purchaseOrder.findUniqueOrThrow({
       where: { id: purchaseOrder.id },
@@ -113,7 +115,7 @@ describeIf("OrderOrchestrator integration (C5)", () => {
     expect(soDb.linkedPurchaseOrderId).toBe(poDb.id);
   });
 
-  it("ROLLBACK: DROPSHIP với customerId sai FK → KHÔNG còn PO lẫn SO", async () => {
+  it("ROLLBACK: DROPSHIP vá»›i customerId sai FK â†’ KHÃ”NG cÃ²n PO láº«n SO", async () => {
     const poBefore = await prisma.purchaseOrder.count({
       where: { supplier: { name: { contains: TAG } } },
     });
@@ -124,12 +126,13 @@ describeIf("OrderOrchestrator integration (C5)", () => {
     await expect(
       OrderOrchestrator.createDropshipOrder(
         {
-          customerId: "khong-ton-tai-fk", // gây lỗi FK ở bước tạo SO (sau khi PO đã tạo)
+          customerId: "khong-ton-tai-fk", // gÃ¢y lá»—i FK á»Ÿ bÆ°á»›c táº¡o SO (sau khi PO Ä‘Ã£ táº¡o)
           supplierId,
+          commissionAmount: "0",
           items: [
             {
               productName: "SP-FAIL",
-              unit: "cái",
+              unit: "cÃ¡i",
               qty: 1,
               sellPrice: "1000",
               baseCost: "0",
@@ -144,7 +147,7 @@ describeIf("OrderOrchestrator integration (C5)", () => {
       ),
     ).rejects.toBeTruthy();
 
-    // Số PO/SO KHÔNG tăng → PO tạo ở bước 1 đã rollback cùng SO lỗi
+    // Sá»‘ PO/SO KHÃ”NG tÄƒng â†’ PO táº¡o á»Ÿ bÆ°á»›c 1 Ä‘Ã£ rollback cÃ¹ng SO lá»—i
     const poAfter = await prisma.purchaseOrder.count({
       where: { supplier: { name: { contains: TAG } } },
     });
@@ -154,10 +157,11 @@ describeIf("OrderOrchestrator integration (C5)", () => {
     expect(poAfter).toBe(poBefore);
     expect(soAfter).toBe(soBefore);
 
-    // Không có PO "SP-FAIL" treo
+    // KhÃ´ng cÃ³ PO "SP-FAIL" treo
     const orphan = await prisma.purchaseOrderItem.count({
       where: { productName: "SP-FAIL" },
     });
     expect(orphan).toBe(0);
   });
 });
+

@@ -99,6 +99,7 @@ export class OrderOrchestrator {
       const salesOrder = await SalesOrderService.createInTx(tx, {
         customerId: input.customerId, fulfillmentType: FULFILLMENT_TYPE.DROPSHIP,
         salespersonId: input.salespersonId, saleDate: input.saleDate,
+        commissionAmount: input.commissionAmount ?? "0",
         items: input.items.map((it) => ({ productId: it.productId, productName: it.productName, unit: it.unit, qty: it.qty, sellPrice: it.sellPrice, baseCost: it.baseCost, taxAmount: it.taxAmount })),
       }, { userId: meta.userId, now, random: (random + 0.001) % 1, linkedPurchaseOrderId: purchaseOrder.id });
 
