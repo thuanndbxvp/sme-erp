@@ -27,8 +27,13 @@ export function Sidebar({ userRole, userName }: { userRole: string; userName: st
   const ADMIN_ACC = ["ADMIN", "ACCOUNTANT"];
   const ADMIN_ONLY = ["ADMIN"];
 
-  // Giữ nguyên cấu trúc MENU
   const MENU: MenuGroup[] = [
+    {
+      title: "Tổng quan",
+      items: [
+        { icon: "🏠", label: "Trung tâm Điều hành", href: "/", active: pathname === "/", allowedRoles: ALL_ROLES },
+      ],
+    },
     {
       title: "Kinh doanh",
       items: [
