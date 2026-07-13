@@ -22,6 +22,7 @@ const PERMISSION_CODES = [
   "cashflow.transaction.edit",
   "cashflow.transaction.delete",
   "inventory.adjust",
+  "users.delete", // Xóa cứng người dùng (MSEW-user-management-ui)
 ] as const;
 
 async function main() {

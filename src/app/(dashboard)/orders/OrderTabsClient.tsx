@@ -115,6 +115,9 @@ export default function OrderTabsClient({ salesOrders, purchaseOrders, initialTa
                   {o.saleDate ? new Date(o.saleDate).toLocaleDateString("vi-VN") : o.orderDate ? new Date(o.orderDate).toLocaleDateString("vi-VN") : "—"}
                 </td>
                 <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center", whiteSpace: "nowrap" }}>
+                  {(o.status === "PENDING" || o.status === "ORDERED") && (
+                    <Link href={`/orders/edit/${o.id}?type=${initialTab}`} style={{ fontSize: "var(--text-xs)", padding: "2px 8px", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-primary)", background: "var(--color-primary)", color: "white", cursor: "pointer", marginRight: 4, textDecoration: "none", display: "inline-block" }}>Sửa</Link>
+                  )}
                   {o.status === "PENDING" && initialTab === "SO" && (
                     <button onClick={() => doDeliver(o.id)} disabled={pending} style={{ fontSize: "var(--text-xs)", padding: "2px 8px", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-success)", background: "var(--color-success-bg)", color: "var(--color-success)", cursor: "pointer", marginRight: 4 }}>Giao hàng</button>
                   )}

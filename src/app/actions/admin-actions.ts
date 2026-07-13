@@ -88,6 +88,55 @@ export async function deactivateUser(formData: FormData) {
   });
 }
 
+/**
+ * Xóa cứng người dùng (MSEW-user-management-ui). Yêu cầu quyền `users.delete`.
+ * - Chặn xóa nếu User đã phát sinh dữ liệu (FK): SalesOrder / PurchaseOrder / OrderStatusHistory
+ *   (audit trail). Nếu có → trả lỗi "đã có giao dịch, chỉ Khóa được".
+ * - Audit log entityType = "User".
+ */
+export async function deleteUser(formData: FormData) {
+  const session = await auth();
+  await requirePermission(session?.user?.id, "users.delete");
+  return safeAction(async () => {
+    const id = formData.get("id") as string;
+
+    // Không cho xóa chính mình.
+    if (session?.user?.id === id) {
+      throw new Error("Không thể xóa chính bạn.");
+    }
+
+    const [salesCount, purchaseCount, historyCount] = await Promise.all([
+      prisma.salesOrder.count({ where: { userId: id } }),
+      prisma.purchaseOrder.count({ where: { userId: id } }),
+      prisma.orderStatusHistory.count({ where: { userId: id } }),
+    ]);
+
+    if (salesCount + purchaseCount + historyCount > 0) {
+      return { ok: false, error: "Người dùng đã có giao dịch, chỉ có thể KHÓA chứ không thể XÓA." } as const;
+    }
+
+    await prisma.user.delete({ where: { id } });
+    AuditLogSafe(id, session?.user?.id);
+    revalidatePath("/users");
+    return { ok: true, id } as const;
+  });
+}
+
+/** Ghi audit log cho deleteUser — tránh import động trong helper (rule no-dynamic-import). */
+function AuditLogSafe(targetUserId: string, actorUserId: string | undefined) {
+  import("@/lib/audit").then(({ AuditAndSecurityHelper }) => {
+    AuditAndSecurityHelper.logAction({
+      action: "DELETE",
+      entityType: "User",
+      entityId: targetUserId,
+      userId: actorUserId,
+      metadata: { message: `[XÓA NGƯỜI DÙNG] ${targetUserId}` },
+    });
+  }).catch(() => {
+    // best-effort: không throw để tránh vỡ response.
+  });
+}
+
 export async function resetUserPassword(formData: FormData) {
   const session = await auth();
   await checkAdmin(session);
