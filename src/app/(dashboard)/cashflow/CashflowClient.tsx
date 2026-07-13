@@ -219,7 +219,10 @@ function CashflowTab({ accounts, transactions, categories, router }: { accounts:
               </select>
               <input name="amount" type="number" min="1" defaultValue={String(editTx.amount)} style={S} required />
               <input name="description" defaultValue={editTx.description ?? ""} style={S} />
-              <button type="submit" disabled={pending} style={btn}>{pending ? "..." : "Lưu"}</button>
+              <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+                <button type="button" onClick={() => setEditTx(null)} disabled={pending} style={{ flex: 1, padding: "10px", borderRadius: "6px", border: "1px solid #ccc", background: "white", cursor: "pointer", fontWeight: 500 }}>Hủy bỏ</button>
+                <button type="submit" disabled={pending} style={{ ...btn, flex: 1, marginTop: 0 }}>{pending ? "..." : "Lưu"}</button>
+              </div>
             </form>
           </div>
         </div>
