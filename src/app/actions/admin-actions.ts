@@ -115,10 +115,18 @@ export async function deleteUser(formData: FormData) {
       return { ok: false, error: "Người dùng đã có giao dịch, chỉ có thể KHÓA chứ không thể XÓA." } as const;
     }
 
-    await prisma.user.delete({ where: { id } });
-    AuditLogSafe(id, session?.user?.id);
-    revalidatePath("/users");
-    return { ok: true, id } as const;
+    try {
+      await prisma.user.delete({ where: { id } });
+      AuditLogSafe(id, session?.user?.id);
+      revalidatePath("/users");
+      return { ok: true, id } as const;
+    } catch (e: any) {
+      if (e.code === 'P2003') {
+        return { ok: false, error: "Không thể xóa người dùng này do vẫn còn dữ liệu liên quan (VD: Phiếu thu/chi, Audit log). Vui lòng chọn KHÓA." } as const;
+      }
+      console.error("[deleteUser] Error:", e);
+      return { ok: false, error: "Đã xảy ra lỗi hệ thống khi xóa người dùng." } as const;
+    }
   });
 }
 
