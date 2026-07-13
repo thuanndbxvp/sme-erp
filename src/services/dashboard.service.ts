@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { Money } from "@/domain/money";
 
 /**
  * Period cho P&L chart:
