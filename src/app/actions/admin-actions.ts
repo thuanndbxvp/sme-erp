@@ -120,10 +120,12 @@ export async function deleteUser(formData: FormData) {
       AuditLogSafe(id, session?.user?.id);
       revalidatePath("/users");
       return { ok: true, id } as const;
-    } catch (e: any) {
-      if (e.code === 'P2003') {
+    } catch (e: unknown) {
+      const isPrismaFkError = typeof e === 'object' && e !== null && 'code' in e && (e as { code: string }).code === 'P2003';
+      if (isPrismaFkError) {
         return { ok: false, error: "Không thể xóa người dùng này do vẫn còn dữ liệu liên quan (VD: Phiếu thu/chi, Audit log). Vui lòng chọn KHÓA." } as const;
       }
+      // eslint-disable-next-line no-console
       console.error("[deleteUser] Error:", e);
       return { ok: false, error: "Đã xảy ra lỗi hệ thống khi xóa người dùng." } as const;
     }
