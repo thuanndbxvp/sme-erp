@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface AuditLog { id: string; action: string; entityType: string; entityId: string; userId: string | null; createdAt: Date; metadata?: any; }
 
 interface Props { logs: AuditLog[]; }
@@ -23,6 +24,7 @@ const ENTITY_MAP: Record<string, string> = {
   WarehouseInventory: "TỒN KHO"
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function formatMetadata(meta: any) {
   if (!meta || Object.keys(meta).length === 0) return "—";
   return Object.entries(meta).map(([k, v]) => {
