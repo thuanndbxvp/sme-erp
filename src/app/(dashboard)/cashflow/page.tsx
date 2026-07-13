@@ -1,12 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { requirePermission } from "@/lib/authorize";
+import { requirePagePermission } from "@/lib/authorize";
 
 export const dynamic = "force-dynamic";
 
 export default async function CashflowPage() {
   const session = await auth();
-  await requirePermission(session?.user?.id, "cashflow.view");
+  await requirePagePermission(session?.user?.id, "cashflow.view");
   const [accounts, transactions, categories] = await Promise.all([
     prisma.account.findMany({ orderBy: { code: "asc" } }),
     prisma.transaction.findMany({ orderBy: { date: "desc" }, take: 500, include: { account: { select: { code: true, name: true } } } }),

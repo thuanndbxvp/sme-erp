@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import { prisma as defaultPrisma } from "@/lib/prisma";
 import { RbacService, ForbiddenError, UnauthorizedError } from "@/services/rbac.service";
+import { redirect } from "next/navigation";
 
 /**
  * Lõi enforce quyền ở TẦNG SERVER (bài học V2: không chỉ ẩn UI).
@@ -40,3 +41,24 @@ export async function hasPermission(
   }
   return RbacService.checkPermission(prisma, userId, code);
 }
+
+/**
+ * Kiểm tra quyền cho Server Component (Page).
+ * Nếu không có quyền sẽ tự động redirect về trang chủ kèm báo lỗi,
+ * tránh để Next.js ném lỗi 500 ở production.
+ */
+export async function requirePagePermission(
+  userId: string | null | undefined,
+  code: string,
+  prisma: PrismaClient = defaultPrisma,
+): Promise<string> {
+  if (!userId) {
+    redirect("/auth/sign-in");
+  }
+  const allowed = await RbacService.checkPermission(prisma, userId, code);
+  if (!allowed) {
+    redirect("/?error=forbidden");
+  }
+  return userId;
+}
+import { redirect } from 'next/navigation';  

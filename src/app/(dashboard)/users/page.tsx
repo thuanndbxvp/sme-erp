@@ -1,13 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { requirePermission } from "@/lib/authorize";
+import { requirePagePermission } from "@/lib/authorize";
 import UsersClient from "./UsersClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function UsersPage() {
   const session = await auth();
-  await requirePermission(session?.user?.id, "system.admin");
+  await requirePagePermission(session?.user?.id, "system.admin");
   const [users, roles] = await Promise.all([
     prisma.user.findMany({ orderBy: { name: "asc" }, include: { role: true } }),
     prisma.role.findMany({ orderBy: { name: "asc" } }),

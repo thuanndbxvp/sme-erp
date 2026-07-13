@@ -1,12 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { requirePermission } from "@/lib/authorize";
+import { requirePagePermission } from "@/lib/authorize";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReportsPage() {
   const session = await auth();
-  await requirePermission(session?.user?.id, "report.view");
+  await requirePagePermission(session?.user?.id, "report.view");
   // P&L
   const items = await prisma.salesOrderItem.findMany({
     where: { salesOrder: { status: "DELIVERED" } },
