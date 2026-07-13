@@ -240,7 +240,7 @@ export default function DashboardClient(props: {
               <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748B" }} />
               <YAxis tickFormatter={formatCompact} tick={{ fontSize: 12, fill: "#64748B" }} />
               <Tooltip
-                formatter={(value: number) => formatVND(value)}
+                formatter={(value) => formatVND(value as number)}
                 contentStyle={{
                   borderRadius: 8,
                   border: "1px solid #E2E8F0",
