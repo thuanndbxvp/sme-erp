@@ -294,11 +294,27 @@ export async function recordTransaction(formData: FormData) {
   });
 }
 
-// updateTransactionAction removed: not implemented in service and not used in UI.
+// updateTransactionAction: đã được viết lại ở MSEW-cashflow-transaction-management (Step 3).
+
+export async function updateTransactionAction(formData: FormData) {
+  const session = await auth();
+  await requirePermission(session?.user?.id, "cashflow.transaction.edit");
+  const id = formData.get("id") as string;
+  return safeAction(async () => {
+    await TransactionService.updateTransactionInTransaction(id, {
+      type: formData.get("type") as "INCOME" | "EXPENSE" | undefined,
+      amount: (formData.get("amount") as string) || undefined,
+      accountId: (formData.get("accountId") as string) || undefined,
+      description: (formData.get("description") as string) ?? undefined,
+    });
+    revalidatePath("/cashflow");
+    return { ok: true, id };
+  });
+}
 
 export async function deleteTransactionAction(id: string) {
   const session = await auth();
-  await requirePermission(session?.user?.id, "cashflow.delete");
+  await requirePermission(session?.user?.id, "cashflow.transaction.delete");
   return safeAction(async () => {
     await TransactionService.deleteTransaction(id);
     revalidatePath("/cashflow");

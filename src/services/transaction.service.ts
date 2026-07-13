@@ -39,6 +39,16 @@ export interface RecordTransactionInput {
   enforceBalanceCheck?: boolean;
 }
 
+export interface UpdateTransactionInput {
+  type?: TransactionTypeValue;
+  amount?: string | number;
+  accountId?: string;
+  cashFlowGroup?: CashFlowGroupValue;
+  customerId?: string | null;
+  supplierId?: string | null;
+  description?: string | null;
+}
+
 export class TransactionService {
   /**
    * Ghi nhận thu/chi, cập nhật balance atomic.
@@ -191,6 +201,150 @@ export class TransactionService {
           },
         });
       },
+      { maxWait: 15_000, timeout: 20_000 },
+    );
+  }
+
+  /**
+   * Sửa giao dịch thủ công (không gắn Order).
+   * Revert số dư cũ → apply số dư mới, atomic trong một Prisma transaction.
+   * Chặn sửa nếu gắn salesOrderId/purchaseOrderId (giao dịch hệ thống).
+   */
+  static async updateTransaction(
+    tx: TxClient,
+    id: string,
+    input: UpdateTransactionInput,
+  ) {
+    await AuditAndSecurityHelper.assertNotPeriodLocked(new Date());
+
+    // SELECT ... FOR UPDATE bản ghi gốc (chống race).
+    const existingRows = await tx.$queryRaw<
+      Array<{
+        id: string;
+        type: TransactionTypeValue;
+        amount: Prisma.Decimal;
+        accountId: string;
+        salesOrderId: string | null;
+        purchaseOrderId: string | null;
+        cashFlowGroup: string;
+        customerId: string | null;
+        supplierId: string | null;
+        description: string | null;
+      }>
+    >`SELECT "id", "type", "amount", "accountId", "salesOrderId", "purchaseOrderId", "cashFlowGroup", "customerId", "supplierId", "description" FROM "Transaction" WHERE "id" = ${id} FOR UPDATE`;
+    const existing = existingRows[0];
+    if (!existing) {
+      throw new NotFoundError("Transaction", id);
+    }
+    if (existing.salesOrderId || existing.purchaseOrderId) {
+      throw new ValidationError(
+        "Không thể sửa giao dịch đã gắn với đơn hàng (chỉ sửa giao dịch thủ công)",
+      );
+    }
+
+    // Tính các field mới (giữ nguyên nếu không truyền).
+    const newType = input.type ?? existing.type;
+    const newAccountId = input.accountId ?? existing.accountId;
+    const newAmountRaw = input.amount ?? existing.amount.toString();
+    if (newAmountRaw === "0" || Number(newAmountRaw) <= 0) {
+      throw new ValidationError("Số tiền phải lớn hơn 0");
+    }
+    const newAmount = Money.of(newAmountRaw);
+
+    // Revert old: khóa account cũ.
+    const oldLocked = await tx.$queryRaw<
+      Array<{ id: string; code: string; name: string; balance: Prisma.Decimal }>
+    >`SELECT "id", "code", "name", "balance" FROM "Account" WHERE "id" = ${existing.accountId} FOR UPDATE`;
+    const oldAccount = oldLocked[0];
+    if (!oldAccount) {
+      throw new NotFoundError("Account", existing.accountId);
+    }
+    const oldBalance = Money.of(oldAccount.balance.toString());
+
+    // Apply new: nếu đổi account thì khóa thêm account mới.
+    let appliedAccountId = newAccountId;
+    if (newAccountId === oldAccount.id) {
+      // Cùng account: revert rồi apply trên cùng balance (gộp 1 lần update).
+      const revertedBalance =
+        existing.type === TRANSACTION_TYPE.INCOME
+          ? oldBalance.sub(Money.of(existing.amount.toString()))
+          : oldBalance.add(Money.of(existing.amount.toString()));
+      const balanceAfterApply =
+        newType === TRANSACTION_TYPE.INCOME
+          ? revertedBalance.add(newAmount)
+          : revertedBalance.sub(newAmount);
+      await tx.account.update({
+        where: { id: oldAccount.id },
+        data: { balance: balanceAfterApply.toDecimalString() },
+      });
+    } else {
+      // Khác account: revert account cũ + apply account mới (mỗi nơi khóa riêng).
+      const revertedBalance =
+        existing.type === TRANSACTION_TYPE.INCOME
+          ? oldBalance.sub(Money.of(existing.amount.toString()))
+          : oldBalance.add(Money.of(existing.amount.toString()));
+      await tx.account.update({
+        where: { id: oldAccount.id },
+        data: { balance: revertedBalance.toDecimalString() },
+      });
+      const newLocked = await tx.$queryRaw<
+        Array<{ id: string; code: string; name: string; balance: Prisma.Decimal }>
+      >`SELECT "id", "code", "name", "balance" FROM "Account" WHERE "id" = ${newAccountId} FOR UPDATE`;
+      const newAccount = newLocked[0];
+      if (!newAccount) {
+        throw new NotFoundError("Account", newAccountId);
+      }
+      const newBalanceBefore = Money.of(newAccount.balance.toString());
+      const balanceAfterApply =
+        newType === TRANSACTION_TYPE.INCOME
+          ? newBalanceBefore.add(newAmount)
+          : newBalanceBefore.sub(newAmount);
+      await tx.account.update({
+        where: { id: newAccount.id },
+        data: { balance: balanceAfterApply.toDecimalString() },
+      });
+      appliedAccountId = newAccount.id;
+    }
+
+    // Update bản ghi.
+    const updated = await tx.transaction.update({
+      where: { id },
+      data: {
+        type: newType,
+        amount: newAmount.toDecimalString(),
+        accountId: appliedAccountId,
+        cashFlowGroup: input.cashFlowGroup ?? existing.cashFlowGroup,
+        customerId: input.customerId === undefined ? existing.customerId : input.customerId,
+        supplierId: input.supplierId === undefined ? existing.supplierId : input.supplierId,
+        description: input.description === undefined ? existing.description : input.description,
+      },
+    });
+
+    AuditAndSecurityHelper.logAction({
+      action: "UPDATE",
+      entityType: "TRANSACTION",
+      entityId: id,
+      metadata: {
+        oldAmount: existing.amount.toString(),
+        newAmount: newAmount.toDecimalString(),
+        oldType: existing.type,
+        newType,
+      },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Helper: mở transaction rồi gọi updateTransaction (cho caller không tự quản tx).
+   */
+  static async updateTransactionInTransaction(
+    id: string,
+    input: UpdateTransactionInput,
+    prisma: PrismaClient = defaultPrisma,
+  ) {
+    return prisma.$transaction(
+      (tx) => TransactionService.updateTransaction(tx, id, input),
       { maxWait: 15_000, timeout: 20_000 },
     );
   }

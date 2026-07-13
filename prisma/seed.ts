@@ -19,6 +19,9 @@ const PERMISSION_CODES = [
   "warehouse.write",
   "account.read",
   "account.write",
+  "cashflow.transaction.edit",
+  "cashflow.transaction.delete",
+  "inventory.adjust",
 ] as const;
 
 async function main() {

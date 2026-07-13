@@ -1,0 +1,13 @@
+﻿node.exe : npm error code ENOTEMPTY
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm error code ENOTEMPTY:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+npm error syscall rmdir
+npm error path D:\sme-erp\node_modules\dayjs\locale
+npm error errno -4051
+npm error ENOTEMPTY: directory not empty, rmdir 'D:\sme-erp\node_modules\dayjs\locale'
+npm error A complete log of this run can be found in: 
+C:\Users\Admin\AppData\Local\npm-cache\_logs\2026-07-12T19_09_31_752Z-debug-0.log

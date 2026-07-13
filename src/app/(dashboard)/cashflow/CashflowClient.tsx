@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { recordTransaction } from "@/app/actions/order-actions";
+import { recordTransaction, updateTransactionAction, deleteTransactionAction } from "@/app/actions/order-actions";
 import { createAccount, updateAccount, deleteAccount, createCategory, updateCategory, deleteCategory } from "@/app/actions/cashflow-settings";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -43,6 +43,7 @@ function CashflowTab({ accounts, transactions, categories, router }: { accounts:
   const [pending, startTransition] = useTransition();
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editTx, setEditTx] = useState<any | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
@@ -147,18 +148,46 @@ function CashflowTab({ accounts, transactions, categories, router }: { accounts:
             <thead style={{ position: "sticky", top: 0, zIndex: 1, background: "var(--color-surface)" }}><tr style={{ borderBottom: "1px solid var(--color-border)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--color-foreground-muted)", textTransform: "uppercase" }}>
               <th style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center", width: 50 }}>STT</th>
               <th style={{ padding: "var(--space-2) var(--space-3)", textAlign: "left" }}>Ngày</th><th style={{ padding: "var(--space-2) var(--space-3)", textAlign: "left" }}>TK</th><th style={{ padding: "var(--space-2) var(--space-3)", textAlign: "right" }}>Số tiền</th><th style={{ padding: "var(--space-2) var(--space-3)", textAlign: "left" }}>Diễn giải</th>
+              <th style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center", width: 160 }}>Thao tác</th>
             </tr></thead>
             <tbody>
-              {displayTransactions.length === 0 ? <tr><td colSpan={5} style={{ padding: "var(--space-6)", textAlign: "center", color: "var(--color-foreground-muted)" }}>Chưa có giao dịch</td></tr> :
-                displayTransactions.map((t: any, i: number) => (
+              {displayTransactions.length === 0 ? <tr><td colSpan={6} style={{ padding: "var(--space-6)", textAlign: "center", color: "var(--color-foreground-muted)" }}>Chưa có giao dịch</td></tr> :
+                displayTransactions.map((t: any, i: number) => {
+                  const isSystem = !!t.salesOrderId || !!t.purchaseOrderId;
+                  return (
                   <tr key={t.id} style={{ borderBottom: i < displayTransactions.length - 1 ? "1px solid var(--color-muted)" : "none", background: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-hover)" }}>
                     <td style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center" }}>{(currentPage - 1) * pageSize + i + 1}</td>
                     <td style={{ padding: "var(--space-2) var(--space-3)", whiteSpace: "nowrap" }}>{new Date(t.date).toLocaleDateString("vi-VN")}</td>
                     <td style={{ padding: "var(--space-2) var(--space-3)" }}>{t.account.code}</td>
                     <td style={{ padding: "var(--space-2) var(--space-3)", textAlign: "right", fontWeight: 600, color: t.type === "INCOME" ? "var(--color-success)" : "var(--color-destructive)" }}>{t.type === "INCOME" ? "+" : "−"}{Number(t.amount).toLocaleString("vi-VN")} đ</td>
                     <td style={{ padding: "var(--space-2) var(--space-3)", fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)" }}>{t.description ?? ""}</td>
+                    <td style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center" }}>
+                      <div style={{ display: "inline-flex", gap: 6 }}>
+                        <button
+                          onClick={() => { setEditTx(t); }}
+                          disabled={isSystem}
+                          title={isSystem ? "Giao dịch hệ thống, không thể sửa/xóa thủ công" : "Sửa giao dịch"}
+                          style={{ ...btnSm, background: "var(--color-surface)", color: isSystem ? "var(--color-foreground-subtle)" : "var(--color-primary)", border: "1px solid", borderColor: isSystem ? "var(--color-border)" : "var(--color-primary)", cursor: isSystem ? "not-allowed" : "pointer", opacity: isSystem ? 0.5 : 1 }}
+                        >Sửa</button>
+                        <button
+                          onClick={() => {
+                            if (isSystem) return;
+                            if (!confirm(`Bạn có chắc muốn xóa giao dịch ${t.type === "INCOME" ? "+" : "−"}${Number(t.amount).toLocaleString("vi-VN")} đ?`)) return;
+                            startTransition(async () => {
+                              const r = await deleteTransactionAction(t.id);
+                              if (r.ok) router.refresh();
+                              else setError(r.error || "Có lỗi xảy ra");
+                            });
+                          }}
+                          disabled={isSystem}
+                          title={isSystem ? "Giao dịch hệ thống, không thể sửa/xóa thủ công" : "Xóa giao dịch"}
+                          style={{ ...btnSm, background: "var(--color-destructive-bg)", color: isSystem ? "var(--color-foreground-subtle)" : "var(--color-destructive)", border: "1px solid", borderColor: isSystem ? "var(--color-border)" : "var(--color-destructive)", cursor: isSystem ? "not-allowed" : "pointer", opacity: isSystem ? 0.5 : 1 }}
+                        >Xóa</button>
+                      </div>
+                    </td>
                   </tr>
-                ))}
+                  );
+                })}
             </tbody>
           </table>
         </div>
@@ -172,6 +201,29 @@ function CashflowTab({ accounts, transactions, categories, router }: { accounts:
           </div>
         )}
       </div>
+
+      {/* Modal sửa giao dịch */}
+      {editTx && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "var(--color-surface)", borderRadius: "var(--radius-lg)", padding: "var(--space-5)", width: "min(480px, 92vw)", boxShadow: "var(--shadow-lg)" }}>
+            <h3>Sửa giao dịch</h3>
+            {error && <div>{error}</div>}
+            <form action={(fd) => { startTransition(async () => { const r = await updateTransactionAction(fd); if (r.ok) { setEditTx(null); router.refresh(); } else setError(r.error); }); }} style={{ display: "grid", gap: 8 }}>
+              <input type="hidden" name="id" value={editTx.id} />
+              <select name="type" defaultValue={editTx.type} style={S}>
+                <option value="INCOME">Thu vào</option>
+                <option value="EXPENSE">Chi ra</option>
+              </select>
+              <select name="accountId" defaultValue={editTx.accountId} style={S}>
+                {accounts.map((a: any) => <option key={a.id} value={a.id}>{a.code}</option>)}
+              </select>
+              <input name="amount" type="number" min="1" defaultValue={String(editTx.amount)} style={S} required />
+              <input name="description" defaultValue={editTx.description ?? ""} style={S} />
+              <button type="submit" disabled={pending} style={btn}>{pending ? "..." : "Lưu"}</button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
