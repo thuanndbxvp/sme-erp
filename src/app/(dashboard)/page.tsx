@@ -34,10 +34,11 @@ export default async function DashboardPage() {
     include: { supplier: true }
   });
 
-  const lowStock = await prisma.product.findMany({
+  const lowStockRaw = await prisma.warehouseInventory.findMany({
     where: { quantity: { lt: 10 } },
     orderBy: { quantity: 'asc' },
-    take: 5
+    take: 5,
+    include: { product: true },
   });
 
   const formatVND = (val: number) =>
@@ -172,19 +173,19 @@ export default async function DashboardPage() {
             <Link href="/catalog/product" className="text-sm text-blue-600 hover:underline font-medium">Tới kho</Link>
           </div>
           <div className="p-0 flex-1">
-            {lowStock.length === 0 ? (
+            {lowStockRaw.length === 0 ? (
               <div className="p-6 text-center text-slate-500 text-sm">Kho hàng an toàn</div>
             ) : (
               <ul className="divide-y divide-slate-100">
-                {lowStock.map(p => (
-                  <li key={p.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                {lowStockRaw.map(inv => (
+                  <li key={inv.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
                     <div className="truncate pr-4">
-                      <p className="text-sm font-semibold text-slate-900 truncate">{p.name}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">Mã: {p.code}</p>
+                      <p className="text-sm font-semibold text-slate-900 truncate">{inv.product.name}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Mã: {inv.product.sku}</p>
                     </div>
                     <div className="text-right whitespace-nowrap">
-                      <p className={`text-sm font-bold ${p.quantity === 0 ? 'text-rose-600' : 'text-amber-500'}`}>
-                        Còn {p.quantity} {p.unit}
+                      <p className={`text-sm font-bold ${inv.quantity === 0 ? 'text-rose-600' : 'text-amber-500'}`}>
+                        Còn {inv.quantity} {inv.product.unit}
                       </p>
                     </div>
                   </li>
