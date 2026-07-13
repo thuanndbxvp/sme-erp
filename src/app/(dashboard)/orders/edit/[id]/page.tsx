@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
+import { auth } from "@/lib/auth";
+import { requirePermission } from "@/lib/authorize";
 import EditOrderClient from "../EditOrderClient";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +13,9 @@ type PageProps = {
 
 export default async function EditOrderPage(props: PageProps) {
   const { id } = await props.params;
+  const session = await auth();
+  await requirePermission(session?.user?.id, "order.view");
+
   const sp = await props.searchParams;
   const type: "SO" | "PO" = sp.type === "PO" ? "PO" : "SO";
 

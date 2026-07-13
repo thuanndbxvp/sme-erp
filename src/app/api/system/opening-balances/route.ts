@@ -96,7 +96,13 @@ export async function POST(req: Request) {
   try {
     await prisma.$transaction(
       async (tx) => {
-        // 4a. Khởi tạo Tồn kho (ADJUST_IN — không ghi nhận vào Doanh thu/Chi phí mua hàng)
+        // 4a. Check idempotency flag
+        const flag = await tx.systemSetting.findUnique({ where: { key: "IS_OPENING_BALANCES_DONE" } });
+        if (flag?.value === "true") {
+          throw new Error("Số dư đầu kỳ đã được khởi tạo. Không thể thực hiện lại.");
+        }
+
+        // 4b. Khởi tạo Tồn kho (ADJUST_IN — không ghi nhận vào Doanh thu/Chi phí mua hàng)
         for (const inv of body.inventoryBalances) {
           await InventoryService.recordMovement(tx, {
             type: MOVEMENT_TYPE.IN,
@@ -110,7 +116,7 @@ export async function POST(req: Request) {
           });
         }
 
-        // 4b. Khởi tạo Số dư Tiền mặt/Ngân hàng
+        // 4c. Khởi tạo Số dư Tiền mặt/Ngân hàng
         //     cashFlowGroup = FINANCING → không đưa vào OPERATIONAL, tránh sai P&L
         for (const cash of body.cashBalances) {
           await TransactionService.recordTransaction(tx, {
@@ -122,7 +128,7 @@ export async function POST(req: Request) {
           });
         }
 
-        // 4c. Khởi tạo Công nợ Phải Thu (AR — Khách hàng)
+        // 4d. Khởi tạo Công nợ Phải Thu (AR — Khách hàng)
         //     Create thẳng Invoice, KHÔNG liên kết SalesOrder
         for (const ar of body.arBalances) {
           await tx.invoice.create({
@@ -138,7 +144,7 @@ export async function POST(req: Request) {
           });
         }
 
-        // 4d. Khởi tạo Công nợ Phải Trả (AP — Nhà cung cấp)
+        // 4e. Khởi tạo Công nợ Phải Trả (AP — Nhà cung cấp)
         //     Create thẳng Invoice, KHÔNG liên kết PurchaseOrder
         for (const ap of body.apBalances) {
           await tx.invoice.create({
@@ -153,6 +159,13 @@ export async function POST(req: Request) {
             },
           });
         }
+
+        // 4f. Set idempotency flag
+        await tx.systemSetting.upsert({
+          where: { key: "IS_OPENING_BALANCES_DONE" },
+          update: { value: "true" },
+          create: { key: "IS_OPENING_BALANCES_DONE", value: "true" },
+        });
       },
       { maxWait: 20000, timeout: 30000 },
     );

@@ -180,7 +180,8 @@ export async function updateOwnProfile(formData: FormData) {
 
 // === TRANSACTION CATEGORY ===
 export async function createTransactionCategory(formData: FormData) {
-  await auth();
+  const session = await auth();
+  await requirePermission(session?.user?.id, "cashflow.category.manage");
   return safeAction(async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (prisma as any).$executeRawUnsafe(

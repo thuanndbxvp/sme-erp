@@ -11,6 +11,11 @@ const nextConfig: NextConfig = {
           { key: "X-XSS-Protection", value: "1; mode=block" },
           // Chống MIME-sniffing — trình duyệt không tự đoán content-type
           { key: "X-Content-Type-Options", value: "nosniff" },
+          // Content Security Policy — chặn XSS và script lạ
+          {
+            key: "Content-Security-Policy",
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.upstash.io; frame-ancestors 'none'; base-uri 'self'; form-action 'self';",
+          },
           // Chống Clickjacking — cấm nhúng trang vào iframe
           { key: "X-Frame-Options", value: "DENY" },
           // Referrer chỉ gửi origin khi cross-origin — không lộ full URL
