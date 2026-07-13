@@ -52,6 +52,8 @@ export interface UpdateSalesOrderInput {
     baseCost: string;
     taxAmount?: string;
   }>;
+  /** Sửa lại ngày bán (backdate). Optional — chỉ áp dụng khi caller đã check quyền `order.edit_date`. */
+  saleDate?: Date;
 }
 
 export interface UpdatePurchaseOrderInput {
@@ -63,6 +65,8 @@ export interface UpdatePurchaseOrderInput {
     buyPrice: string;
     taxAmount?: string;
   }>;
+  /** Sửa lại ngày nhập (backdate). Optional — chỉ áp dụng khi caller đã check quyền `order.edit_date`. */
+  orderDate?: Date;
 }
 
 export class OrderOrchestrator {
@@ -376,6 +380,14 @@ export class OrderOrchestrator {
         metadata: { message: "Sửa đơn hàng Auto-Delta", deltaAmount: deltaAmount.toDecimalString() },
       });
 
+      // Backdate: sửa lại ngày bán nếu caller truyền saleDate và đã có quyền `order.edit_date`.
+      if (input.saleDate) {
+        await tx.salesOrder.update({
+          where: { id: salesOrderId },
+          data: { saleDate: input.saleDate },
+        });
+      }
+
       return tx.salesOrder.findUniqueOrThrow({ where: { id: salesOrderId }, include: { items: true } });
     }, { maxWait: 15_000, timeout: 30_000 });
   }
@@ -504,6 +516,14 @@ export class OrderOrchestrator {
         userId: meta.userId,
         metadata: { message: "Sửa đơn mua Auto-Delta", deltaAmount: deltaAmount.toDecimalString() },
       });
+
+      // Backdate: sửa lại ngày nhập nếu caller truyền orderDate và đã có quyền `order.edit_date`.
+      if (input.orderDate) {
+        await tx.purchaseOrder.update({
+          where: { id: purchaseOrderId },
+          data: { orderDate: input.orderDate },
+        });
+      }
 
       return tx.purchaseOrder.findUniqueOrThrow({ where: { id: purchaseOrderId }, include: { items: true } });
     }, { maxWait: 15_000, timeout: 30_000 });

@@ -24,9 +24,11 @@ export interface EditOrderInitial {
   type: "SO" | "PO";
   items: EditOrderItem[];
   refundAccountId?: string;
+  saleDate?: string | null;
+  orderDate?: string | null;
 }
 
-export default function EditOrderClient({ initial, products }: { initial: EditOrderInitial; products: any[] }) {
+export default function EditOrderClient({ initial, products, canEditDate }: { initial: EditOrderInitial; products: any[]; canEditDate?: boolean }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +37,10 @@ export default function EditOrderClient({ initial, products }: { initial: EditOr
     initial.items.length > 0
       ? initial.items
       : [{ productName: "", unit: "cái", qty: 1, sellPrice: "0", buyPrice: "0", baseCost: "0" }]
+  );
+  const dateField = isSO ? "saleDate" : "orderDate";
+  const [orderDateStr, setOrderDateStr] = useState<string>(
+    (isSO ? initial.saleDate : initial.orderDate) ?? ""
   );
 
   function addItem() {
@@ -49,7 +55,7 @@ export default function EditOrderClient({ initial, products }: { initial: EditOr
 
   function onSubmit() {
     setError(null);
-    const payload = {
+    const payload: Record<string, unknown> = {
       items: items.map((it) => {
         const prod = products.find((p: any) => p.name === it.productName);
         return {
@@ -65,11 +71,14 @@ export default function EditOrderClient({ initial, products }: { initial: EditOr
       }),
       refundAccountId: initial.refundAccountId,
     };
+    if (canEditDate && orderDateStr) {
+      payload[dateField] = orderDateStr;
+    }
 
     startTransition(async () => {
       const r = isSO
-        ? await editSalesOrderAction(initial.id, payload)
-        : await editPurchaseOrderAction(initial.id, { items: payload.items });
+        ? await editSalesOrderAction(initial.id, payload as Parameters<typeof editSalesOrderAction>[1])
+        : await editPurchaseOrderAction(initial.id, { items: payload.items } as Parameters<typeof editPurchaseOrderAction>[1]);
       if (r.ok) {
         router.push("/orders");
         router.refresh();
@@ -101,6 +110,23 @@ export default function EditOrderClient({ initial, products }: { initial: EditOr
           Trạng thái hiện tại: <strong>{initial.status}</strong>. Hệ thống sẽ tự tính chênh lệch kho & quỹ.
         </p>
       </div>
+
+      {canEditDate && (
+        <div style={{ marginBottom: "var(--space-4)" }}>
+          <label style={{ display: "block", fontSize: "var(--text-sm)", fontWeight: 600, marginBottom: "var(--space-2)" }}>
+            Ngày tạo đơn:
+          </label>
+          <input
+            type="date"
+            value={orderDateStr}
+            onChange={(e) => setOrderDateStr(e.target.value)}
+            style={{ ...inputStyle, maxWidth: 240 }}
+          />
+          <p style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", marginTop: 4 }}>
+            Chỉ Admin được cấp quyền <code>order.edit_date</code> mới thấy và sửa được trường này.
+          </p>
+        </div>
+      )}
 
       {error && (
         <div style={{ padding: "var(--space-3) var(--space-4)", background: "var(--color-destructive-bg)", color: "var(--color-destructive)", borderRadius: "var(--radius-md)", fontSize: "var(--text-sm)", marginBottom: "var(--space-4)" }}>

@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { requirePermission } from "@/lib/authorize";
 import OrderTabsClient from "./OrderTabsClient";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +23,8 @@ type PageProps = {
 };
 
 export default async function OrdersPage(props: PageProps) {
+  const session = await auth();
+  await requirePermission(session?.user?.id, "order.view");
   const params = await props.searchParams;
   const tab = params.tab === "PO" ? "PO" : "SO";
   const page = parseInt((params.page as string) || "1", 10);

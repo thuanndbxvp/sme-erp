@@ -24,3 +24,19 @@ export async function requirePermission(
   }
   return userId;
 }
+
+/**
+ * Kiểm tra quyền không ném lỗi, trả về boolean. Dùng cho UI gating
+ * (chỉ để ẩn/hiện nút), KHÔNG thay thế cho `requirePermission` ở server action.
+ * Trả về false nếu chưa đăng nhập.
+ */
+export async function hasPermission(
+  userId: string | null | undefined,
+  code: string,
+  prisma: PrismaClient = defaultPrisma,
+): Promise<boolean> {
+  if (!userId) {
+    return false;
+  }
+  return RbacService.checkPermission(prisma, userId, code);
+}

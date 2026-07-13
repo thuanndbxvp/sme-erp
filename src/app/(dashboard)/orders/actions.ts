@@ -28,13 +28,21 @@ export async function editSalesOrderAction(id: string, data: {
   }>;
   /** Quỹ dùng để hoàn tiền dư nếu balanceDue bị âm. Optional. */
   refundAccountId?: string;
+  /** Sửa lại ngày bán (backdate). Yêu cầu quyền `order.edit_date`. Optional. */
+  saleDate?: string;
 }) {
   const session = await auth();
   await requirePermission(session?.user?.id, "sales.order.edit");
+  if (data.saleDate) {
+    await requirePermission(session?.user?.id, "order.edit_date");
+  }
   return safeAction(async () => {
     const so = await OrderOrchestrator.updateSalesOrder(
       id,
-      { items: data.items },
+      {
+        items: data.items,
+        ...(data.saleDate ? { saleDate: new Date(data.saleDate) } : {}),
+      },
       {
         userId: session?.user?.id,
         now: new Date(),
@@ -58,13 +66,21 @@ export async function editPurchaseOrderAction(id: string, data: {
     buyPrice: string;
     taxAmount?: string;
   }>;
+  /** Sửa lại ngày nhập (backdate). Yêu cầu quyền `order.edit_date`. Optional. */
+  orderDate?: string;
 }) {
   const session = await auth();
   await requirePermission(session?.user?.id, "purchase.order.edit");
+  if (data.orderDate) {
+    await requirePermission(session?.user?.id, "order.edit_date");
+  }
   return safeAction(async () => {
     const po = await OrderOrchestrator.updatePurchaseOrder(
       id,
-      { items: data.items },
+      {
+        items: data.items,
+        ...(data.orderDate ? { orderDate: new Date(data.orderDate) } : {}),
+      },
       {
         userId: session?.user?.id,
         now: new Date(),

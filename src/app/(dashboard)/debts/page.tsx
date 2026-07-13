@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { requirePermission } from "@/lib/authorize";
 import AgingView from "@/components/debts/AgingView";
 import PaymentForm from "@/components/debts/PaymentForm";
 
@@ -49,6 +51,8 @@ function calcAging(invoices: Array<{
 }
 
 export default async function DebtsPage() {
+  const session = await auth();
+  await requirePermission(session?.user?.id, "debt.view");
   const [accounts, arInvoicesRaw, apInvoicesRaw] = await Promise.all([
     prisma.account.findMany({ where: { isActive: true }, orderBy: { code: "asc" } }),
     prisma.invoice.findMany({ where: { type: "AR", status: { not: "CANCELLED" }, balanceDue: { gt: "0" } }, include: { customer: { select: { id: true, name: true } }, salesOrder: { select: { orderCode: true } } }, orderBy: { createdAt: "desc" } }),

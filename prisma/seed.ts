@@ -26,6 +26,7 @@ const PERMISSION_CODES = [
   "hr.view",        // Xem danh sách nhân viên & bảng lương (MSEW-payroll-hr)
   "hr.manage",      // Cấp tạm ứng, chỉnh sửa lương cứng (MSEW-payroll-hr)
   "commission.approve", // Duyệt hoa hồng đơn hàng (MSEW-payroll-hr)
+  "order.edit_date",   // Sửa ngày tạo đơn hàng (Backdate) (MSEW-edit-order-date)
 ] as const;
 
 async function main() {
