@@ -111,7 +111,7 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
 
   function addItem() { setItems([...items, { id: String(Date.now()), productName: "", unit: "cái", qty: 1, buyPrice: "", sellPrice: "", baseCost: "", purchaseTaxRate: "", taxRate: "" }]); }
   function removeItem(id: string) { if (items.length > 1) setItems(items.filter(it => it.id !== id)); }
-  function updateItem(id: string, f: string, v: any) { setItems(items.map(it => it.id === id ? { ...it, [f]: v } : it)); }
+  function updateItem(id: string, f: string, v: any) { setItems(prev => prev.map(it => it.id === id ? { ...it, [f]: v } : it)); }
   function handleProductSelect(id: string, name: string) {
     const prod = products.find((p: any) => p.name === name);
     updateItem(id, "productName", name);

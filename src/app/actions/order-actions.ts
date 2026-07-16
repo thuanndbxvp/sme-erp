@@ -56,6 +56,7 @@ export async function createWarehouseOrder(formData: FormData) {
           applications: [{ invoiceId: invoice.id, appliedAmount: salePayment.paidAmount }],
           cashFlowGroup: "OPERATIONAL",
           description: `Thu tiền đơn bán ${so.orderCode}`,
+          userId: session?.user?.id,
         });
       }
     }
@@ -101,6 +102,7 @@ export async function createDropshipOrder(formData: FormData) {
           applications: [{ invoiceId: inv.id, appliedAmount: purchasePayment.paidAmount }],
           cashFlowGroup: "OPERATIONAL",
           description: `Chi trả NCC đơn ${result.purchaseOrder.orderCode}`,
+          userId: session?.user?.id,
         });
       }
     }
@@ -117,6 +119,7 @@ export async function createDropshipOrder(formData: FormData) {
           applications: [{ invoiceId: inv.id, appliedAmount: salePayment.paidAmount }],
           cashFlowGroup: "OPERATIONAL",
           description: `Thu tiền đơn bán ${result.salesOrder.orderCode}`,
+          userId: session?.user?.id,
         });
       }
     }
@@ -140,14 +143,35 @@ export async function deliverOrder(formData: FormData) {
   });
 }
 
+export async function receiveOrder(formData: FormData) {
+  const session = await auth();
+  await requirePermission(session?.user?.id, "order.deliver");
+  const id = formData.get("id") as string;
+  return safeAction(async () => {
+    await OrderOrchestrator.receivePurchaseOrder(id, { userId: session?.user?.id });
+    revalidatePath("/orders");
+    await AuditAndSecurityHelper.logAction({ action: "UPDATE", entityType: "PurchaseOrder", entityId: id, userId: session?.user?.id, metadata: { note: "Nhận hàng" } });
+    return { id };
+  });
+}
+
 export async function cancelOrder(formData: FormData) {
   const session = await auth();
   await requirePermission(session?.user?.id, "order.cancel");
   const id = formData.get("id") as string;
   const type = formData.get("type") as string;
+  const password = formData.get("password") as string;
+  
   return safeAction(async () => {
-    if (type === "SO") await OrderOrchestrator.cancelSalesOrder(id);
-    else await OrderOrchestrator.cancelPurchaseOrder(id);
+    if (!password) throw new Error("Vui lòng nhập mật khẩu xác nhận.");
+    const user = await prisma.user.findUnique({ where: { id: session?.user?.id } });
+    if (!user) throw new Error("Không tìm thấy user.");
+    const bcrypt = await import("bcryptjs");
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isMatch) throw new Error("Mật khẩu không chính xác.");
+
+    if (type === "SO") await OrderOrchestrator.cancelSalesOrder(id, { userId: session?.user?.id });
+    else await OrderOrchestrator.cancelPurchaseOrder(id, { userId: session?.user?.id });
     revalidatePath("/orders");
     await AuditAndSecurityHelper.logAction({ action: "CANCEL", entityType: type === "SO" ? "SalesOrder" : "PurchaseOrder", entityId: id, userId: session?.user?.id });
     return { id };
@@ -168,6 +192,7 @@ export async function recordPayment(formData: FormData) {
       cashFlowGroup: "OPERATIONAL",
       description: (formData.get("description") as string) || null,
       applications,
+      userId: session?.user?.id,
     });
     revalidatePath("/debts");
     revalidatePath("/cashflow");
@@ -223,11 +248,11 @@ export async function createUnifiedOrder(formData: FormData) {
         }, { now: new Date(), random: Math.random() });
 
         return _po;
-      });
+      }, { maxWait: 15_000, timeout: 30_000 });
 
       if (purchasePayment) {
         const inv = await prisma.invoice.findUnique({ where: { purchaseOrderId: po.id } });
-        if (inv) await PaymentService.recordPayment({ direction: PAYMENT_DIRECTION.OUT, amount: purchasePayment.paidAmount, accountId: purchasePayment.accountId, cashFlowGroup: "OPERATIONAL", supplierId: po.supplierId, applications: [{ invoiceId: inv.id, appliedAmount: purchasePayment.paidAmount }], description: `Chi NCC đơn ${po.orderCode}` });
+        if (inv) await PaymentService.recordPayment({ direction: PAYMENT_DIRECTION.OUT, amount: purchasePayment.paidAmount, accountId: purchasePayment.accountId, cashFlowGroup: "OPERATIONAL", supplierId: po.supplierId, applications: [{ invoiceId: inv.id, appliedAmount: purchasePayment.paidAmount }], description: `Chi NCC đơn ${po.orderCode}`, userId: session?.user?.id });
       }
       revalidatePath("/orders"); revalidatePath("/cashflow");
       return { id: po.id, orderCode: po.orderCode };
@@ -246,7 +271,7 @@ export async function createUnifiedOrder(formData: FormData) {
 
       if (salePayment) {
         const inv = await prisma.invoice.findUnique({ where: { salesOrderId: so.id } });
-        if (inv) await PaymentService.recordPayment({ direction: PAYMENT_DIRECTION.IN, amount: salePayment.paidAmount, accountId: salePayment.accountId, cashFlowGroup: "OPERATIONAL", customerId: so.customerId, applications: [{ invoiceId: inv.id, appliedAmount: salePayment.paidAmount }], description: `Thu KH đơn ${so.orderCode}` });
+        if (inv) await PaymentService.recordPayment({ direction: PAYMENT_DIRECTION.IN, amount: salePayment.paidAmount, accountId: salePayment.accountId, cashFlowGroup: "OPERATIONAL", customerId: so.customerId, applications: [{ invoiceId: inv.id, appliedAmount: salePayment.paidAmount }], description: `Thu KH đơn ${so.orderCode}`, userId: session?.user?.id });
       }
       revalidatePath("/orders"); revalidatePath("/cashflow"); revalidatePath("/debts");
       return { id: so.id, orderCode: so.orderCode };
@@ -264,11 +289,11 @@ export async function createUnifiedOrder(formData: FormData) {
 
     if (purchasePayment) {
       const inv = await prisma.invoice.findUnique({ where: { purchaseOrderId: result.purchaseOrder.id } });
-      if (inv) await PaymentService.recordPayment({ direction: PAYMENT_DIRECTION.OUT, amount: purchasePayment.paidAmount, accountId: purchasePayment.accountId, cashFlowGroup: "OPERATIONAL", supplierId: result.purchaseOrder.supplierId, applications: [{ invoiceId: inv.id, appliedAmount: purchasePayment.paidAmount }], description: `Chi NCC dropship ${result.purchaseOrder.orderCode}` });
+      if (inv) await PaymentService.recordPayment({ direction: PAYMENT_DIRECTION.OUT, amount: purchasePayment.paidAmount, accountId: purchasePayment.accountId, cashFlowGroup: "OPERATIONAL", supplierId: result.purchaseOrder.supplierId, applications: [{ invoiceId: inv.id, appliedAmount: purchasePayment.paidAmount }], description: `Chi NCC dropship ${result.purchaseOrder.orderCode}`, userId: session?.user?.id });
     }
     if (salePayment) {
       const inv = await prisma.invoice.findUnique({ where: { salesOrderId: result.salesOrder.id } });
-      if (inv) await PaymentService.recordPayment({ direction: PAYMENT_DIRECTION.IN, amount: salePayment.paidAmount, accountId: salePayment.accountId, cashFlowGroup: "OPERATIONAL", customerId: result.salesOrder.customerId, applications: [{ invoiceId: inv.id, appliedAmount: salePayment.paidAmount }], description: `Thu KH dropship ${result.salesOrder.orderCode}` });
+      if (inv) await PaymentService.recordPayment({ direction: PAYMENT_DIRECTION.IN, amount: salePayment.paidAmount, accountId: salePayment.accountId, cashFlowGroup: "OPERATIONAL", customerId: result.salesOrder.customerId, applications: [{ invoiceId: inv.id, appliedAmount: salePayment.paidAmount }], description: `Thu KH dropship ${result.salesOrder.orderCode}`, userId: session?.user?.id });
     }
     revalidatePath("/orders"); revalidatePath("/cashflow"); revalidatePath("/debts");
     return { id: result.salesOrder.id, orderCode: result.salesOrder.orderCode };
@@ -285,6 +310,7 @@ export async function recordTransaction(formData: FormData) {
       amount: formData.get("amount") as string,
       accountId: formData.get("accountId") as string,
       description: (formData.get("description") as string) || null,
+      userId: session?.user?.id,
     });
     // Nếu có category, map vào cashFlowGroup hoặc ghi note
     if (categoryId) {
@@ -310,6 +336,7 @@ export async function updateTransactionAction(formData: FormData) {
       amount: (formData.get("amount") as string) || undefined,
       accountId: (formData.get("accountId") as string) || undefined,
       description: (formData.get("description") as string) ?? undefined,
+      userId: session?.user?.id,
     });
     revalidatePath("/cashflow");
     return { ok: true, id };
@@ -320,7 +347,7 @@ export async function deleteTransactionAction(id: string) {
   const session = await auth();
   await requirePermission(session?.user?.id, "cashflow.transaction.delete");
   return safeAction(async () => {
-    await TransactionService.deleteTransaction(id);
+    await TransactionService.deleteTransaction(id, session?.user?.id);
     revalidatePath("/cashflow");
     return { ok: true };
   });

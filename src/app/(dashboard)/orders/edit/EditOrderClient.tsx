@@ -50,7 +50,7 @@ export default function EditOrderClient({ initial, products, canEditDate }: { in
     if (items.length > 1) setItems(items.filter((_, idx) => idx !== i));
   }
   function updateItem(i: number, f: string, v: any) {
-    setItems(items.map((it, idx) => (idx === i ? { ...it, [f]: v } : it)));
+    setItems(prev => prev.map((it, idx) => (idx === i ? { ...it, [f]: v } : it)));
   }
 
   function onSubmit() {

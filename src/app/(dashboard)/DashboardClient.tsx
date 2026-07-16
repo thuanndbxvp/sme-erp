@@ -12,7 +12,8 @@ import {
   Users,
   Factory,
 } from "lucide-react";
-import {
+import * as Recharts from "recharts";
+const {
   BarChart,
   Bar,
   XAxis,
@@ -22,7 +23,7 @@ import {
   Legend,
   ResponsiveContainer,
   Cell,
-} from "recharts";
+} = Recharts;
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 

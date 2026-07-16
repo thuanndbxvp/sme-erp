@@ -83,7 +83,7 @@ export class OrderOrchestrator {
       const so = await SalesOrderService.createInTx(tx, soInput, { userId: meta.userId, now: meta.now, random: meta.random });
       await OrderBillingService.createSalesInvoice(tx, { id: so.id, customerId: so.customerId, totalAmount: so.totalAmount.toString() }, meta);
       return so;
-    });
+    }, { maxWait: 15_000, timeout: 30_000 });
   }
 
   static async createDropshipOrder(
@@ -111,7 +111,7 @@ export class OrderOrchestrator {
       await OrderBillingService.createSalesInvoice(tx, { id: salesOrder.id, customerId: salesOrder.customerId, totalAmount: salesOrder.totalAmount.toString() }, meta);
 
       return { salesOrder, purchaseOrder };
-    });
+    }, { maxWait: 15_000, timeout: 30_000 });
   }
 
   // ===== DELIVER / RECEIVE =====
@@ -352,6 +352,7 @@ export class OrderOrchestrator {
             customerId: invoice.customerId,
             salesOrderId,
             description: `Hoàn tiền dư do sửa đơn bán (${invoice.invoiceNumber})`,
+            userId: meta.userId,
           });
           await tx.invoice.update({
             where: { id: invoice.id },

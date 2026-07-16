@@ -44,6 +44,7 @@ export interface RecordPaymentInput {
   supplierId?: string | null;
   cashFlowGroup?: CashFlowGroupValue;
   description?: string | null;
+  userId?: string;
 }
 
 export class PaymentService {
@@ -85,6 +86,7 @@ export class PaymentService {
           supplierId: input.supplierId ?? null,
           cashFlowGroup: input.cashFlowGroup,
           description: input.description ?? "Thanh toán",
+          userId: input.userId,
         });
 
         // 2) FOR UPDATE + apply payment cho từng invoice
@@ -131,6 +133,7 @@ export class PaymentService {
       customerId?: string | null;
       supplierId?: string | null;
       description?: string | null;
+      userId?: string;
     },
     prisma: PrismaClient = defaultPrisma,
   ) {
@@ -151,6 +154,7 @@ export class PaymentService {
           customerId: input.customerId ?? null,
           supplierId: input.supplierId ?? null,
           description: input.description ?? "Tạm ứng / Đặt cọc",
+          userId: input.userId,
         });
 
         return tx.payment.create({

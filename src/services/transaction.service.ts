@@ -35,6 +35,7 @@ export interface RecordTransactionInput {
   salesOrderId?: string | null;
   purchaseOrderId?: string | null;
   description?: string | null;
+  userId?: string;
   /** Nếu true, kiểm số dư tài khoản không âm sau khi EXPENSE. Mặc định false. */
   enforceBalanceCheck?: boolean;
 }
@@ -47,6 +48,7 @@ export interface UpdateTransactionInput {
   customerId?: string | null;
   supplierId?: string | null;
   description?: string | null;
+  userId?: string;
 }
 
 export class TransactionService {
@@ -114,6 +116,7 @@ export class TransactionService {
       action: "CREATE",
       entityType: "TRANSACTION",
       entityId: "new", // Vì create chưa có ID, hoặc lưu lại response
+      userId: input.userId,
       metadata: { type: input.type, amount: input.amount, accountId: input.accountId }
     });
     return tx.transaction.create({
@@ -149,6 +152,7 @@ export class TransactionService {
    */
   static async deleteTransaction(
     id: string,
+    userId?: string,
     prisma: PrismaClient = defaultPrisma,
   ) {
     await AuditAndSecurityHelper.assertNotPeriodLocked(new Date());
@@ -194,6 +198,7 @@ export class TransactionService {
           action: "DELETE",
           entityType: "TRANSACTION",
           entityId: id,
+          userId,
           metadata: {
             type: existing.type,
             amount: existing.amount.toString(),
@@ -324,6 +329,7 @@ export class TransactionService {
       action: "UPDATE",
       entityType: "TRANSACTION",
       entityId: id,
+      userId: input.userId,
       metadata: {
         oldAmount: existing.amount.toString(),
         newAmount: newAmount.toDecimalString(),
