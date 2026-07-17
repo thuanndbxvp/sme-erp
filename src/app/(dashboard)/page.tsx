@@ -31,8 +31,10 @@ export default async function DashboardPage() {
   }
   const isAdminOrAccountant = ["ADMIN", "ACCOUNTANT"].includes(userRole);
 
-  let topAR = [];
-  let topAP = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let topAR: any[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let topAP: any[] = [];
   if (isAdminOrAccountant) {
     topAR = await prisma.invoice.findMany({
       where: { type: "AR", status: { in: ["OPEN", "PARTIAL"] } },
