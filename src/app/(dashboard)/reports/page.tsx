@@ -22,8 +22,8 @@ export default async function ReportsPage() {
   const orderCount = await prisma.salesOrder.count({ where: { status: "DELIVERED", createdAt: { gte: liveDate } } });
 
   // AR/AP
-  const ar = await prisma.invoice.aggregate({ where: { type: "AR", status: { not: "CANCELLED" }, createdAt: { gte: liveDate } }, _sum: { balanceDue: true, totalAmount: true } });
-  const ap = await prisma.invoice.aggregate({ where: { type: "AP", status: { not: "CANCELLED" }, createdAt: { gte: liveDate } }, _sum: { balanceDue: true, totalAmount: true } });
+  const ar = await prisma.invoice.aggregate({ where: { type: "AR", status: { not: "CANCELLED" } }, _sum: { balanceDue: true, totalAmount: true } });
+  const ap = await prisma.invoice.aggregate({ where: { type: "AP", status: { not: "CANCELLED" } }, _sum: { balanceDue: true, totalAmount: true } });
 
   // Product sales
   const topProducts = await prisma.$queryRawUnsafe<Array<{ name: string; qty: number; revenue: number }>>(

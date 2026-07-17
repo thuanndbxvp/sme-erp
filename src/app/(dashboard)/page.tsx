@@ -38,13 +38,13 @@ export default async function DashboardPage() {
   if (isAdminOrAccountant) {
     const liveDate = new Date("2026-07-10T00:00:00Z");
     topAR = await prisma.invoice.findMany({
-      where: { type: "AR", status: { in: ["OPEN", "PARTIAL"] }, createdAt: { gte: liveDate } },
+      where: { type: "AR", status: { in: ["OPEN", "PARTIAL"] } },
       orderBy: { balanceDue: "desc" },
       take: 5,
       include: { customer: true },
     });
     topAP = await prisma.invoice.findMany({
-      where: { type: "AP", status: { in: ["OPEN", "PARTIAL"] }, createdAt: { gte: liveDate } },
+      where: { type: "AP", status: { in: ["OPEN", "PARTIAL"] } },
       orderBy: { balanceDue: "desc" },
       take: 5,
       include: { supplier: true },

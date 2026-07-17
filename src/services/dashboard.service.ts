@@ -30,13 +30,13 @@ export class DashboardService {
     // 2. Lấy Tổng Phải Thu (AR) và Phải Trả (AP)
     const receivables = await prisma.invoice.aggregate({
       _sum: { balanceDue: true },
-      where: { type: "AR", status: { in: ["OPEN", "PARTIAL"] }, createdAt: { gte: liveDate } },
+      where: { type: "AR", status: { in: ["OPEN", "PARTIAL"] } },
     });
     const totalAR = receivables._sum.balanceDue?.toNumber() || 0;
 
     const payables = await prisma.invoice.aggregate({
       _sum: { balanceDue: true },
-      where: { type: "AP", status: { in: ["OPEN", "PARTIAL"] }, createdAt: { gte: liveDate } },
+      where: { type: "AP", status: { in: ["OPEN", "PARTIAL"] } },
     });
     const totalAP = payables._sum.balanceDue?.toNumber() || 0;
 
