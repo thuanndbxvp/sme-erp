@@ -29,53 +29,107 @@ export default async function ReportsPage() {
   );
 
   return (
-    <div>
-      <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, marginBottom: "var(--space-6)" }}>Báo cáo</h1>
+    <div style={{ paddingBottom: "var(--space-10)" }}>
+      <div style={{ marginBottom: "var(--space-8)" }}>
+        <h1 style={{ fontSize: "var(--text-3xl)", fontWeight: 800, letterSpacing: "-0.02em", margin: "0 0 var(--space-2) 0" }}>Báo cáo Tổng hợp</h1>
+        <p style={{ color: "var(--color-foreground-muted)", fontSize: "var(--text-base)", margin: 0 }}>Theo dõi sức khỏe tài chính và hiệu quả kinh doanh</p>
+      </div>
 
       {/* P&L Cards */}
-      <h2 style={{ fontSize: "var(--text-lg)", fontWeight: 600, marginBottom: "var(--space-3)" }}>Lỗ lãi (P&L)</h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
-        <StatCard label="Doanh thu" value={revenue.toLocaleString("vi-VN") + " đ"} color="var(--color-success)" />
-        <StatCard label="Giá vốn" value={cogs.toLocaleString("vi-VN") + " đ"} color="var(--color-destructive)" />
-        <StatCard label="Lãi gộp" value={(revenue - cogs).toLocaleString("vi-VN") + " đ"} color="var(--color-primary)" />
-        <StatCard label="Chi phí" value={totalExpense.toLocaleString("vi-VN") + " đ"} color="var(--color-warning)" />
-        <StatCard label="Lãi ròng" value={(revenue - cogs - totalExpense).toLocaleString("vi-VN") + " đ"} color={revenue - cogs - totalExpense >= 0 ? "var(--color-success)" : "var(--color-destructive)"} />
-        <StatCard label="Đơn đã giao" value={String(orderCount)} color="var(--color-foreground)" />
+      <h2 style={{ fontSize: "var(--text-xl)", fontWeight: 700, marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: 24 }}>📊</span> Lỗ lãi (P&L)
+      </h2>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "var(--space-5)", marginBottom: "var(--space-8)" }}>
+        <StatCard label="Doanh thu" value={revenue.toLocaleString("vi-VN") + " đ"} color="var(--color-success)" icon="📈" />
+        <StatCard label="Giá vốn" value={cogs.toLocaleString("vi-VN") + " đ"} color="var(--color-destructive)" icon="📉" />
+        <StatCard label="Lãi gộp" value={(revenue - cogs).toLocaleString("vi-VN") + " đ"} color="var(--color-primary)" icon="💰" />
+        <StatCard label="Chi phí" value={totalExpense.toLocaleString("vi-VN") + " đ"} color="var(--color-warning)" icon="💸" />
+        <StatCard label="Lãi ròng" value={(revenue - cogs - totalExpense).toLocaleString("vi-VN") + " đ"} color={revenue - cogs - totalExpense >= 0 ? "var(--color-success)" : "var(--color-destructive)"} icon="💎" />
+        <StatCard label="Đơn đã giao" value={String(orderCount)} color="var(--color-foreground)" icon="📦" />
       </div>
 
       {/* AR/AP */}
-      <h2 style={{ fontSize: "var(--text-lg)", fontWeight: 600, marginBottom: "var(--space-3)" }}>Công nợ</h2>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
-        <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "var(--space-5)" }}>
-          <div style={{ fontWeight: 600, fontSize: "var(--text-sm)", marginBottom: "var(--space-2)" }}>Phải thu (AR)</div>
-          <div style={{ fontSize: "var(--text-lg)" }}>Tổng: <strong>{Number(ar._sum.totalAmount ?? 0).toLocaleString("vi-VN")} đ</strong></div>
-          <div style={{ color: "var(--color-destructive)", fontWeight: 600 }}>Còn: {Number(ar._sum.balanceDue ?? 0).toLocaleString("vi-VN")} đ</div>
+      <h2 style={{ fontSize: "var(--text-xl)", fontWeight: 700, marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: 24 }}>⚖️</span> Công nợ
+      </h2>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: "var(--space-5)", marginBottom: "var(--space-8)" }}>
+        {/* AR Card */}
+        <div style={{ background: "linear-gradient(145deg, var(--color-surface), var(--color-surface-hover))", border: "1px solid var(--color-border)", borderRadius: "var(--radius-xl)", padding: "var(--space-6)", boxShadow: "var(--shadow-sm)", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+             <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--color-success-bg)", color: "var(--color-success)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>📥</div>
+             <div>
+               <div style={{ fontWeight: 700, fontSize: "var(--text-lg)" }}>Phải thu khách hàng (AR)</div>
+               <div style={{ fontSize: "var(--text-sm)", color: "var(--color-foreground-muted)" }}>Các khoản tiền khách hàng đang nợ</div>
+             </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "var(--space-2)" }}>
+            <div>
+              <div style={{ fontSize: "var(--text-sm)", color: "var(--color-foreground-muted)", marginBottom: 4, fontWeight: 500 }}>Tổng nợ đã xuất</div>
+              <div style={{ fontSize: "var(--text-2xl)", fontWeight: 800, letterSpacing: "-0.5px" }}>{Number(ar._sum.totalAmount ?? 0).toLocaleString("vi-VN")} đ</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: "var(--text-sm)", color: "var(--color-foreground-muted)", marginBottom: 4, fontWeight: 500 }}>Số tiền chưa thu</div>
+              <div style={{ fontSize: "var(--text-xl)", fontWeight: 800, color: "var(--color-destructive)", letterSpacing: "-0.5px" }}>{Number(ar._sum.balanceDue ?? 0).toLocaleString("vi-VN")} đ</div>
+            </div>
+          </div>
+          <div style={{ width: "100%", height: 8, background: "var(--color-muted)", borderRadius: 4, overflow: "hidden", marginTop: 4 }}>
+            <div style={{ width: `${(Number(ar._sum.totalAmount ?? 0) - Number(ar._sum.balanceDue ?? 0)) / (Number(ar._sum.totalAmount ?? 1) || 1) * 100}%`, height: "100%", background: "var(--color-success)", transition: "width 1s ease-out" }} />
+          </div>
+          <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", textAlign: "right", fontWeight: 500 }}>
+            Tỉ lệ thu hồi: <span style={{ color: "var(--color-success)", fontWeight: 700 }}>{(((Number(ar._sum.totalAmount ?? 0) - Number(ar._sum.balanceDue ?? 0)) / (Number(ar._sum.totalAmount ?? 1) || 1)) * 100).toFixed(1)}%</span>
+          </div>
         </div>
-        <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "var(--space-5)" }}>
-          <div style={{ fontWeight: 600, fontSize: "var(--text-sm)", marginBottom: "var(--space-2)" }}>Phải trả (AP)</div>
-          <div style={{ fontSize: "var(--text-lg)" }}>Tổng: <strong>{Number(ap._sum.totalAmount ?? 0).toLocaleString("vi-VN")} đ</strong></div>
-          <div style={{ color: "var(--color-destructive)", fontWeight: 600 }}>Còn: {Number(ap._sum.balanceDue ?? 0).toLocaleString("vi-VN")} đ</div>
+
+        {/* AP Card */}
+        <div style={{ background: "linear-gradient(145deg, var(--color-surface), var(--color-surface-hover))", border: "1px solid var(--color-border)", borderRadius: "var(--radius-xl)", padding: "var(--space-6)", boxShadow: "var(--shadow-sm)", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+             <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--color-warning-bg)", color: "var(--color-warning)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>📤</div>
+             <div>
+               <div style={{ fontWeight: 700, fontSize: "var(--text-lg)" }}>Phải trả nhà cung cấp (AP)</div>
+               <div style={{ fontSize: "var(--text-sm)", color: "var(--color-foreground-muted)" }}>Các khoản tiền đang nợ đối tác</div>
+             </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "var(--space-2)" }}>
+            <div>
+              <div style={{ fontSize: "var(--text-sm)", color: "var(--color-foreground-muted)", marginBottom: 4, fontWeight: 500 }}>Tổng nợ đã nhập</div>
+              <div style={{ fontSize: "var(--text-2xl)", fontWeight: 800, letterSpacing: "-0.5px" }}>{Number(ap._sum.totalAmount ?? 0).toLocaleString("vi-VN")} đ</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: "var(--text-sm)", color: "var(--color-foreground-muted)", marginBottom: 4, fontWeight: 500 }}>Số tiền chưa trả</div>
+              <div style={{ fontSize: "var(--text-xl)", fontWeight: 800, color: "var(--color-warning)", letterSpacing: "-0.5px" }}>{Number(ap._sum.balanceDue ?? 0).toLocaleString("vi-VN")} đ</div>
+            </div>
+          </div>
+          <div style={{ width: "100%", height: 8, background: "var(--color-muted)", borderRadius: 4, overflow: "hidden", marginTop: 4 }}>
+            <div style={{ width: `${(Number(ap._sum.totalAmount ?? 0) - Number(ap._sum.balanceDue ?? 0)) / (Number(ap._sum.totalAmount ?? 1) || 1) * 100}%`, height: "100%", background: "var(--color-warning)", transition: "width 1s ease-out" }} />
+          </div>
+          <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", textAlign: "right", fontWeight: 500 }}>
+            Tiến độ trả nợ: <span style={{ color: "var(--color-warning)", fontWeight: 700 }}>{(((Number(ap._sum.totalAmount ?? 0) - Number(ap._sum.balanceDue ?? 0)) / (Number(ap._sum.totalAmount ?? 1) || 1)) * 100).toFixed(1)}%</span>
+          </div>
         </div>
       </div>
 
       {/* Top Products */}
-      <h2 style={{ fontSize: "var(--text-lg)", fontWeight: 600, marginBottom: "var(--space-3)" }}>Top sản phẩm bán chạy</h2>
-      <div style={{ background: "var(--color-surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", overflow: "hidden" }}>
+      <h2 style={{ fontSize: "var(--text-xl)", fontWeight: 700, marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: 24 }}>🔥</span> Top sản phẩm bán chạy
+      </h2>
+      <div style={{ background: "var(--color-surface)", borderRadius: "var(--radius-xl)", border: "1px solid var(--color-border)", overflow: "hidden", boxShadow: "var(--shadow-sm)" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)", fontVariantNumeric: "tabular-nums" }}>
-          <thead><tr style={{ borderBottom: "1px solid var(--color-border)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--color-foreground-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center", width: 50 }}>STT</th>
-            <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>Sản phẩm</th>
-            <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right" }}>SL bán</th>
-            <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right" }}>Doanh thu</th>
+          <thead><tr style={{ borderBottom: "1px solid var(--color-border)", fontSize: "var(--text-xs)", fontWeight: 700, color: "var(--color-foreground-muted)", textTransform: "uppercase", letterSpacing: "0.05em", background: "var(--color-surface-hover)" }}>
+            <th style={{ padding: "var(--space-4) var(--space-5)", textAlign: "center", width: 60 }}>STT</th>
+            <th style={{ padding: "var(--space-4) var(--space-5)", textAlign: "left" }}>Tên sản phẩm</th>
+            <th style={{ padding: "var(--space-4) var(--space-5)", textAlign: "right" }}>Số lượng đã bán</th>
+            <th style={{ padding: "var(--space-4) var(--space-5)", textAlign: "right" }}>Tổng doanh thu</th>
           </tr></thead>
           <tbody>
-            {topProducts.length === 0 ? <tr><td colSpan={4} style={{ padding: "var(--space-6)", textAlign: "center", color: "var(--color-foreground-muted)" }}>Chưa có dữ liệu</td></tr> :
+            {topProducts.length === 0 ? <tr><td colSpan={4} style={{ padding: "var(--space-10)", textAlign: "center", color: "var(--color-foreground-muted)", fontSize: "var(--text-base)" }}>Chưa có dữ liệu đơn hàng thành công</td></tr> :
               topProducts.map((p, i) => (
-                <tr key={p.name} style={{ borderBottom: i < topProducts.length - 1 ? "1px solid var(--color-muted)" : "none", background: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-hover)" }}>
-                  <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>{i + 1}</td>
-                  <td style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 500 }}>{p.name}</td>
-                  <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right" }}>{p.qty}</td>
-                  <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right", fontWeight: 600 }}>{Number(p.revenue).toLocaleString("vi-VN")} đ</td>
+                <tr key={p.name} style={{ borderBottom: i < topProducts.length - 1 ? "1px solid var(--color-muted)" : "none", background: "var(--color-surface)", transition: "background 0.2s" }}>
+                  <td style={{ padding: "var(--space-4) var(--space-5)", textAlign: "center", fontWeight: 600, color: i < 3 ? "var(--color-primary)" : "var(--color-foreground-muted)" }}>
+                    {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}
+                  </td>
+                  <td style={{ padding: "var(--space-4) var(--space-5)", fontWeight: 600, fontSize: "var(--text-base)" }}>{p.name}</td>
+                  <td style={{ padding: "var(--space-4) var(--space-5)", textAlign: "right", fontWeight: 600 }}>{p.qty}</td>
+                  <td style={{ padding: "var(--space-4) var(--space-5)", textAlign: "right", fontWeight: 700, color: "var(--color-success)" }}>{Number(p.revenue).toLocaleString("vi-VN")} đ</td>
                 </tr>
               ))
             }
@@ -86,11 +140,27 @@ export default async function ReportsPage() {
   );
 }
 
-function StatCard({ label, value, color }: { label: string; value: string; color: string }) {
+function StatCard({ label, value, color, icon }: { label: string; value: string; color: string; icon?: string }) {
   return (
-    <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "var(--space-4)" }}>
-      <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", fontWeight: 500 }}>{label}</div>
-      <div style={{ fontSize: "var(--text-base)", fontWeight: 700, marginTop: "var(--space-1)", color }}>{value}</div>
+    <div style={{ 
+      background: "var(--color-surface)", 
+      border: "1px solid var(--color-border)", 
+      borderRadius: "var(--radius-xl)", 
+      padding: "var(--space-5)", 
+      boxShadow: "var(--shadow-sm)",
+      display: "flex",
+      flexDirection: "column",
+      gap: "var(--space-3)"
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ fontSize: "var(--text-sm)", color: "var(--color-foreground-muted)", fontWeight: 600 }}>{label}</div>
+        {icon && (
+          <div style={{ width: 36, height: 36, borderRadius: "50%", background: color + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
+            {icon}
+          </div>
+        )}
+      </div>
+      <div style={{ fontSize: "clamp(1.25rem, 2vw, 1.75rem)", fontWeight: 800, color, letterSpacing: "-0.5px" }}>{value}</div>
     </div>
   );
 }
