@@ -12,16 +12,27 @@ const ACTION_MAP: Record<string, string> = {
   UPDATE: "CẬP NHẬT",
   DELETE: "XÓA",
   CANCEL: "HỦY BỎ",
-  APPROVE: "PHÊ DUYỆT"
+  APPROVE: "PHÊ DUYỆT",
+  LOGIN: "ĐĂNG NHẬP",
+  LOGOUT: "ĐĂNG XUẤT"
 };
 
 const ENTITY_MAP: Record<string, string> = {
-  TRANSACTION: "GIAO DỊCH",
-  InventoryMovement: "KIỂM KÊ KHO",
-  SalesOrder: "ĐƠN BÁN",
-  PurchaseOrder: "ĐƠN MUA",
+  TRANSACTION: "GIAO DỊCH TIỀN",
+  InventoryMovement: "BIẾN ĐỘNG KHO",
+  SalesOrder: "ĐƠN BÁN HÀNG",
+  PurchaseOrder: "ĐƠN MUA HÀNG",
   Product: "SẢN PHẨM",
-  WarehouseInventory: "TỒN KHO"
+  WarehouseInventory: "TỒN KHO",
+  User: "NGƯỜI DÙNG",
+  Role: "NHÓM QUYỀN",
+  Supplier: "NHÀ CUNG CẤP",
+  Customer: "KHÁCH HÀNG",
+  Invoice: "HÓA ĐƠN CÔNG NỢ",
+  PaymentApplication: "GẠCH NỢ",
+  Warehouse: "KHO HÀNG",
+  CashAccount: "QUỸ TIỀN",
+  AuditLog: "NHẬT KÝ"
 };
 
 const META_KEYS_MAP: Record<string, string> = {
@@ -40,7 +51,17 @@ const META_KEYS_MAP: Record<string, string> = {
   productId: "Mã SP",
   warehouseId: "Mã Kho",
   productName: "Sản phẩm",
-  warehouseName: "Kho hàng"
+  warehouseName: "Kho hàng",
+  message: "Ghi chú hệ thống",
+  note: "Ghi chú",
+  status: "Trạng thái",
+  fromStatus: "Từ trạng thái",
+  toStatus: "Sang trạng thái",
+  balanceDue: "Dư nợ",
+  totalAmount: "Tổng tiền",
+  email: "Email đăng nhập",
+  role: "Quyền",
+  fulfillmentType: "Hình thức giao"
 };
 
 const REASON_LABELS: Record<string, string> = {
@@ -55,28 +76,47 @@ const REASON_LABELS: Record<string, string> = {
   DROPSHIP_OUT: "Xuất ảo (Dropship)",
 };
 
+const VALUE_MAP: Record<string, string> = {
+  "IN": "Tăng (Thu/Nhập)",
+  "OUT": "Giảm (Chi/Xuất)",
+  "AR": "Phải thu",
+  "AP": "Phải trả",
+  "PENDING": "Chờ xử lý",
+  "ORDERED": "Đã đặt hàng",
+  "RECEIVED": "Đã nhận hàng",
+  "DELIVERED": "Đã giao hàng",
+  "CANCELLED": "Đã hủy",
+  "OPEN": "Mở",
+  "PARTIAL": "Một phần",
+  "PAID": "Đã thanh toán",
+  "DROPSHIP": "Giao thẳng",
+  "STOCK": "Kho thường"
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function formatMetadata(meta: any) {
   if (!meta || Object.keys(meta).length === 0) return "—";
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", alignItems: "center" }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", alignItems: "center", marginTop: 4 }}>
       {Object.entries(meta).map(([k, v], idx, arr) => {
         const key = META_KEYS_MAP[k] || k;
         let value = String(v);
 
-        if (k === "productId" || k === "warehouseId") {
-          value = value.substring(0, 6) + "..."; // Làm ngắn UUID
+        // Xử lý các mã ID dài
+        if (value.startsWith("cmr") && value.length > 20) {
+          value = value.substring(0, 6) + "..."; 
         }
 
         if (k === "reason" && REASON_LABELS[value]) {
           value = REASON_LABELS[value] as string;
+        } else if (VALUE_MAP[value]) {
+          value = VALUE_MAP[value];
         }
 
         return (
-          <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+          <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "var(--color-surface-hover)", padding: "2px 6px", borderRadius: 4, border: "1px solid var(--color-border)" }}>
             <span style={{ color: "var(--color-foreground-muted)" }}>{key}:</span>
             <b style={{ color: "var(--color-foreground)" }}>{value}</b>
-            {idx < arr.length - 1 && <span style={{ color: "var(--color-muted)", marginLeft: "var(--space-2)" }}>|</span>}
           </span>
         );
       })}
