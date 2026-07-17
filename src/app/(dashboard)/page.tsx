@@ -36,7 +36,6 @@ export default async function DashboardPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let topAP: any[] = [];
   if (isAdminOrAccountant) {
-    const liveDate = new Date("2026-07-10T00:00:00Z");
     topAR = await prisma.invoice.findMany({
       where: { type: "AR", status: { in: ["OPEN", "PARTIAL"] } },
       orderBy: { balanceDue: "desc" },
