@@ -11,17 +11,45 @@ export default async function AuditPage() {
   });
 
   const userIds = Array.from(new Set(logs.map(l => l.userId).filter(Boolean))) as string[];
-  const users = await prisma.user.findMany({
-    where: { id: { in: userIds } },
-    select: { id: true, name: true }
+  const productIds = new Set<string>();
+  const warehouseIds = new Set<string>();
+
+  logs.forEach(l => {
+    if (l.metadata && typeof l.metadata === "object" && !Array.isArray(l.metadata)) {
+      const meta = l.metadata as any;
+      if (meta.productId) productIds.add(meta.productId);
+      if (meta.warehouseId) warehouseIds.add(meta.warehouseId);
+    }
   });
+
+  const [users, products, warehouses] = await Promise.all([
+    prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true } }),
+    prisma.product.findMany({ where: { id: { in: Array.from(productIds) } }, select: { id: true, name: true } }),
+    prisma.warehouse.findMany({ where: { id: { in: Array.from(warehouseIds) } }, select: { id: true, name: true } })
+  ]);
   
   const userMap = new Map(users.map(u => [u.id, u.name]));
+  const productMap = new Map(products.map(p => [p.id, p.name]));
+  const warehouseMap = new Map(warehouses.map(w => [w.id, w.name]));
 
-  const logsWithUser = logs.map(l => ({
-    ...l,
-    userName: l.userId ? (userMap.get(l.userId) || "Không xác định") : "Hệ thống"
-  }));
+  const logsWithUser = logs.map(l => {
+    const enrichedMeta = l.metadata && typeof l.metadata === "object" ? { ...(l.metadata as any) } : {};
+    
+    if (enrichedMeta.productId) {
+      enrichedMeta.productName = productMap.get(enrichedMeta.productId) || enrichedMeta.productId;
+      delete enrichedMeta.productId; // Ẩn mã ID thô
+    }
+    if (enrichedMeta.warehouseId) {
+      enrichedMeta.warehouseName = warehouseMap.get(enrichedMeta.warehouseId) || enrichedMeta.warehouseId;
+      delete enrichedMeta.warehouseId; // Ẩn mã ID thô
+    }
+
+    return {
+      ...l,
+      metadata: enrichedMeta,
+      userName: l.userId ? (userMap.get(l.userId) || "Không xác định") : "Hệ thống"
+    };
+  });
 
   return (
     <div>

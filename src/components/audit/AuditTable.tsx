@@ -38,7 +38,9 @@ const META_KEYS_MAP: Record<string, string> = {
   newQuantity: "Tồn kho mới",
   delta: "Mức thay đổi",
   productId: "Mã SP",
-  warehouseId: "Mã Kho"
+  warehouseId: "Mã Kho",
+  productName: "Sản phẩm",
+  warehouseName: "Kho hàng"
 };
 
 const REASON_LABELS: Record<string, string> = {
@@ -115,7 +117,10 @@ export default function AuditTable({ logs }: Props) {
                   <td style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 600, color: log.action === "DELETE" ? "var(--color-destructive)" : log.action === "CREATE" ? "var(--color-success)" : "var(--color-warning)" }}>{ACTION_MAP[log.action] || log.action}</td>
                   <td style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 500 }}>{ENTITY_MAP[log.entityType] || log.entityType}</td>
                   <td style={{ padding: "var(--space-3) var(--space-4)", fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)" }}>
-                    <div style={{ marginBottom: 4, fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--color-muted-foreground)" }}>ID: {log.entityId}</div>
+                    <div style={{ marginBottom: 4, fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--color-muted-foreground)" }}>
+                      {log.action === "DELETE" ? "Mã đối tượng đã xoá: " : "Mã đối tượng (ID): "} 
+                      {log.entityId}
+                    </div>
                     {formatMetadata(log.metadata)}
                   </td>
                   <td style={{ padding: "var(--space-3) var(--space-4)", whiteSpace: "nowrap", textAlign: "right" }}>{new Date(log.createdAt).toLocaleString("vi-VN")}</td>
