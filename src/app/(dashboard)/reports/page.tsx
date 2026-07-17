@@ -39,7 +39,7 @@ export default async function ReportsPage() {
       <h2 style={{ fontSize: "var(--text-xl)", fontWeight: 700, marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ fontSize: 24 }}>📊</span> Lỗ lãi (P&L)
       </h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "var(--space-4)", marginBottom: "var(--space-8)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "var(--space-3)", marginBottom: "var(--space-8)" }}>
         <StatCard label="Doanh thu" value={revenue.toLocaleString("vi-VN") + " đ"} color="var(--color-success)" icon="📈" />
         <StatCard label="Giá vốn" value={cogs.toLocaleString("vi-VN") + " đ"} color="var(--color-destructive)" icon="📉" />
         <StatCard label="Lãi gộp" value={(revenue - cogs).toLocaleString("vi-VN") + " đ"} color="var(--color-primary)" icon="💰" />
@@ -52,27 +52,27 @@ export default async function ReportsPage() {
       <h2 style={{ fontSize: "var(--text-xl)", fontWeight: 700, marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ fontSize: 24 }}>⚖️</span> Công nợ
       </h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "var(--space-5)", marginBottom: "var(--space-8)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "var(--space-4)", marginBottom: "var(--space-8)" }}>
         {/* AR Card */}
-        <div style={{ background: "linear-gradient(145deg, var(--color-surface), var(--color-surface-hover))", border: "1px solid var(--color-border)", borderRadius: "var(--radius-xl)", padding: "var(--space-5)", boxShadow: "var(--shadow-sm)", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-             <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--color-success-bg)", color: "var(--color-success)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>📥</div>
+        <div style={{ background: "linear-gradient(145deg, var(--color-surface), var(--color-surface-hover))", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "var(--space-4)", boxShadow: "var(--shadow-sm)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+             <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--color-success-bg)", color: "var(--color-success)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>📥</div>
              <div>
-               <div style={{ fontWeight: 700, fontSize: "var(--text-base)" }}>Phải thu khách hàng (AR)</div>
+               <div style={{ fontWeight: 700, fontSize: "var(--text-sm)" }}>Phải thu khách hàng (AR)</div>
                <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)" }}>Các khoản tiền khách hàng đang nợ</div>
              </div>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "var(--space-2)", gap: 8 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "var(--space-1)", gap: 8 }}>
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", marginBottom: 4, fontWeight: 500 }}>Tổng nợ đã xuất</div>
-              <div style={{ fontSize: "clamp(1rem, 1.5vw, 1.5rem)", fontWeight: 800, letterSpacing: "-0.5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{Number(ar._sum.totalAmount ?? 0).toLocaleString("vi-VN")} đ</div>
+              <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", marginBottom: 2, fontWeight: 500 }}>Tổng nợ đã xuất</div>
+              <div style={{ fontSize: "var(--text-lg)", fontWeight: 700, letterSpacing: "-0.5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{Number(ar._sum.totalAmount ?? 0).toLocaleString("vi-VN")} đ</div>
             </div>
             <div style={{ textAlign: "right", minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", marginBottom: 4, fontWeight: 500 }}>Số tiền chưa thu</div>
-              <div style={{ fontSize: "clamp(1rem, 1.5vw, 1.25rem)", fontWeight: 800, color: "var(--color-destructive)", letterSpacing: "-0.5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{Number(ar._sum.balanceDue ?? 0).toLocaleString("vi-VN")} đ</div>
+              <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", marginBottom: 2, fontWeight: 500 }}>Số tiền chưa thu</div>
+              <div style={{ fontSize: "var(--text-base)", fontWeight: 700, color: "var(--color-destructive)", letterSpacing: "-0.5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{Number(ar._sum.balanceDue ?? 0).toLocaleString("vi-VN")} đ</div>
             </div>
           </div>
-          <div style={{ width: "100%", height: 6, background: "var(--color-muted)", borderRadius: 3, overflow: "hidden", marginTop: 4 }}>
+          <div style={{ width: "100%", height: 6, background: "var(--color-muted)", borderRadius: 3, overflow: "hidden", marginTop: 2 }}>
             <div style={{ width: `${(Number(ar._sum.totalAmount ?? 0) - Number(ar._sum.balanceDue ?? 0)) / (Number(ar._sum.totalAmount ?? 1) || 1) * 100}%`, height: "100%", background: "var(--color-success)", transition: "width 1s ease-out" }} />
           </div>
           <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", textAlign: "right", fontWeight: 500 }}>
@@ -81,25 +81,25 @@ export default async function ReportsPage() {
         </div>
 
         {/* AP Card */}
-        <div style={{ background: "linear-gradient(145deg, var(--color-surface), var(--color-surface-hover))", border: "1px solid var(--color-border)", borderRadius: "var(--radius-xl)", padding: "var(--space-5)", boxShadow: "var(--shadow-sm)", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-             <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--color-warning-bg)", color: "var(--color-warning)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>📤</div>
+        <div style={{ background: "linear-gradient(145deg, var(--color-surface), var(--color-surface-hover))", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "var(--space-4)", boxShadow: "var(--shadow-sm)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+             <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--color-warning-bg)", color: "var(--color-warning)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>📤</div>
              <div>
-               <div style={{ fontWeight: 700, fontSize: "var(--text-base)" }}>Phải trả nhà cung cấp (AP)</div>
+               <div style={{ fontWeight: 700, fontSize: "var(--text-sm)" }}>Phải trả nhà cung cấp (AP)</div>
                <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)" }}>Các khoản tiền đang nợ đối tác</div>
              </div>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "var(--space-2)", gap: 8 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "var(--space-1)", gap: 8 }}>
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", marginBottom: 4, fontWeight: 500 }}>Tổng nợ đã nhập</div>
-              <div style={{ fontSize: "clamp(1rem, 1.5vw, 1.5rem)", fontWeight: 800, letterSpacing: "-0.5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{Number(ap._sum.totalAmount ?? 0).toLocaleString("vi-VN")} đ</div>
+              <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", marginBottom: 2, fontWeight: 500 }}>Tổng nợ đã nhập</div>
+              <div style={{ fontSize: "var(--text-lg)", fontWeight: 700, letterSpacing: "-0.5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{Number(ap._sum.totalAmount ?? 0).toLocaleString("vi-VN")} đ</div>
             </div>
             <div style={{ textAlign: "right", minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", marginBottom: 4, fontWeight: 500 }}>Số tiền chưa trả</div>
-              <div style={{ fontSize: "clamp(1rem, 1.5vw, 1.25rem)", fontWeight: 800, color: "var(--color-warning)", letterSpacing: "-0.5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{Number(ap._sum.balanceDue ?? 0).toLocaleString("vi-VN")} đ</div>
+              <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", marginBottom: 2, fontWeight: 500 }}>Số tiền chưa trả</div>
+              <div style={{ fontSize: "var(--text-base)", fontWeight: 700, color: "var(--color-warning)", letterSpacing: "-0.5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{Number(ap._sum.balanceDue ?? 0).toLocaleString("vi-VN")} đ</div>
             </div>
           </div>
-          <div style={{ width: "100%", height: 6, background: "var(--color-muted)", borderRadius: 3, overflow: "hidden", marginTop: 4 }}>
+          <div style={{ width: "100%", height: 6, background: "var(--color-muted)", borderRadius: 3, overflow: "hidden", marginTop: 2 }}>
             <div style={{ width: `${(Number(ap._sum.totalAmount ?? 0) - Number(ap._sum.balanceDue ?? 0)) / (Number(ap._sum.totalAmount ?? 1) || 1) * 100}%`, height: "100%", background: "var(--color-warning)", transition: "width 1s ease-out" }} />
           </div>
           <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", textAlign: "right", fontWeight: 500 }}>
@@ -112,7 +112,7 @@ export default async function ReportsPage() {
       <h2 style={{ fontSize: "var(--text-xl)", fontWeight: 700, marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ fontSize: 24 }}>🔥</span> Top sản phẩm bán chạy
       </h2>
-      <div style={{ background: "var(--color-surface)", borderRadius: "var(--radius-xl)", border: "1px solid var(--color-border)", overflow: "hidden", boxShadow: "var(--shadow-sm)", overflowX: "auto" }}>
+      <div style={{ background: "var(--color-surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", overflow: "hidden", boxShadow: "var(--shadow-sm)", overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)", fontVariantNumeric: "tabular-nums", minWidth: 500 }}>
           <thead><tr style={{ borderBottom: "1px solid var(--color-border)", fontSize: "var(--text-xs)", fontWeight: 700, color: "var(--color-foreground-muted)", textTransform: "uppercase", letterSpacing: "0.05em", background: "var(--color-surface-hover)" }}>
             <th style={{ padding: "var(--space-4) var(--space-5)", textAlign: "center", width: 60 }}>STT</th>
@@ -124,12 +124,12 @@ export default async function ReportsPage() {
             {topProducts.length === 0 ? <tr><td colSpan={4} style={{ padding: "var(--space-10)", textAlign: "center", color: "var(--color-foreground-muted)", fontSize: "var(--text-base)" }}>Chưa có dữ liệu đơn hàng thành công</td></tr> :
               topProducts.map((p, i) => (
                 <tr key={p.name} style={{ borderBottom: i < topProducts.length - 1 ? "1px solid var(--color-muted)" : "none", background: "var(--color-surface)", transition: "background 0.2s" }}>
-                  <td style={{ padding: "var(--space-4) var(--space-5)", textAlign: "center", fontWeight: 600, color: i < 3 ? "var(--color-primary)" : "var(--color-foreground-muted)" }}>
+                  <td style={{ padding: "var(--space-3) var(--space-5)", textAlign: "center", fontWeight: 600, color: i < 3 ? "var(--color-primary)" : "var(--color-foreground-muted)" }}>
                     {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}
                   </td>
-                  <td style={{ padding: "var(--space-4) var(--space-5)", fontWeight: 600, fontSize: "var(--text-base)" }}>{p.name}</td>
-                  <td style={{ padding: "var(--space-4) var(--space-5)", textAlign: "right", fontWeight: 600 }}>{p.qty}</td>
-                  <td style={{ padding: "var(--space-4) var(--space-5)", textAlign: "right", fontWeight: 700, color: "var(--color-success)" }}>{Number(p.revenue).toLocaleString("vi-VN")} đ</td>
+                  <td style={{ padding: "var(--space-3) var(--space-5)", fontWeight: 600, fontSize: "var(--text-sm)" }}>{p.name}</td>
+                  <td style={{ padding: "var(--space-3) var(--space-5)", textAlign: "right", fontWeight: 600 }}>{p.qty}</td>
+                  <td style={{ padding: "var(--space-3) var(--space-5)", textAlign: "right", fontWeight: 700, color: "var(--color-success)" }}>{Number(p.revenue).toLocaleString("vi-VN")} đ</td>
                 </tr>
               ))
             }
@@ -145,7 +145,7 @@ function StatCard({ label, value, color, icon }: { label: string; value: string;
     <div style={{ 
       background: "var(--color-surface)", 
       border: "1px solid var(--color-border)", 
-      borderRadius: "var(--radius-xl)", 
+      borderRadius: "var(--radius-lg)", 
       padding: "var(--space-4)", 
       boxShadow: "var(--shadow-sm)",
       display: "flex",
@@ -153,14 +153,14 @@ function StatCard({ label, value, color, icon }: { label: string; value: string;
       gap: "var(--space-2)"
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ fontSize: "var(--text-sm)", color: "var(--color-foreground-muted)", fontWeight: 600 }}>{label}</div>
+        <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", fontWeight: 600 }}>{label}</div>
         {icon && (
-          <div style={{ width: 32, height: 32, borderRadius: "50%", background: color + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
+          <div style={{ width: 28, height: 28, borderRadius: "50%", background: color + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>
             {icon}
           </div>
         )}
       </div>
-      <div style={{ fontSize: "clamp(1.125rem, 1.5vw, 1.5rem)", fontWeight: 800, color, letterSpacing: "-0.5px", wordBreak: "break-word", lineHeight: 1.2 }}>{value}</div>
+      <div style={{ fontSize: "var(--text-lg)", fontWeight: 700, color, letterSpacing: "-0.5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", lineHeight: 1.2 }}>{value}</div>
     </div>
   );
 }
