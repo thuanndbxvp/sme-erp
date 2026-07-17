@@ -53,12 +53,13 @@ const REASON_LABELS: Record<string, string> = {
   DROPSHIP_OUT: "Xuất ảo (Dropship)",
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function formatMetadata(meta: any) {
   if (!meta || Object.keys(meta).length === 0) return "—";
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", alignItems: "center" }}>
       {Object.entries(meta).map(([k, v], idx, arr) => {
-        let key = META_KEYS_MAP[k] || k;
+        const key = META_KEYS_MAP[k] || k;
         let value = String(v);
 
         if (k === "productId" || k === "warehouseId") {
