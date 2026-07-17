@@ -16,6 +16,7 @@ export default async function AuditPage() {
 
   logs.forEach(l => {
     if (l.metadata && typeof l.metadata === "object" && !Array.isArray(l.metadata)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const meta = l.metadata as any;
       if (meta.productId) productIds.add(meta.productId);
       if (meta.warehouseId) warehouseIds.add(meta.warehouseId);
@@ -33,6 +34,7 @@ export default async function AuditPage() {
   const warehouseMap = new Map(warehouses.map(w => [w.id, w.name]));
 
   const logsWithUser = logs.map(l => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const enrichedMeta = l.metadata && typeof l.metadata === "object" ? { ...(l.metadata as any) } : {};
     
     if (enrichedMeta.productId) {

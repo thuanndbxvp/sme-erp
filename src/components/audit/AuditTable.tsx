@@ -98,7 +98,7 @@ function formatMetadata(meta: any) {
   if (!meta || Object.keys(meta).length === 0) return "—";
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", alignItems: "center", marginTop: 4 }}>
-      {Object.entries(meta).map(([k, v], idx, arr) => {
+      {Object.entries(meta).map(([k, v]) => {
         const key = META_KEYS_MAP[k] || k;
         let value = String(v);
 
