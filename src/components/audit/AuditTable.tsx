@@ -110,7 +110,7 @@ function formatMetadata(meta: any) {
         if (k === "reason" && REASON_LABELS[value]) {
           value = REASON_LABELS[value] as string;
         } else if (VALUE_MAP[value]) {
-          value = VALUE_MAP[value];
+          value = VALUE_MAP[value] as string;
         }
 
         return (
