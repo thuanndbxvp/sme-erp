@@ -59,7 +59,7 @@ export default function DashboardClient(props: {
   const plData = period === "month" ? props.plMonth : period === "quarter" ? props.plQuarter : props.plYear;
 
   const formatVND = (val: number) =>
-    new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(val);
+    new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(Math.round(val));
 
   const formatCompact = (val: number) => {
     // Compact cho trục Y: "1.5M", "200K"

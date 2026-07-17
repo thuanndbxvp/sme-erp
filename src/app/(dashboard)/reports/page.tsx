@@ -7,25 +7,27 @@ export const dynamic = "force-dynamic";
 export default async function ReportsPage() {
   const session = await auth();
   await requirePagePermission(session?.user?.id, "report.view");
+  const liveDate = new Date("2026-07-10T00:00:00Z");
+
   // P&L
   const items = await prisma.salesOrderItem.findMany({
-    where: { salesOrder: { status: "DELIVERED" } },
+    where: { salesOrder: { status: "DELIVERED", createdAt: { gte: liveDate } } },
     select: { sellTotal: true, baseCost: true, qty: true },
   });
   let revenue = 0, cogs = 0;
   for (const it of items) { revenue += Number(it.sellTotal); cogs += Number(it.baseCost) * it.qty; }
 
-  const expenses = await prisma.transaction.aggregate({ where: { type: "EXPENSE" }, _sum: { amount: true } });
+  const expenses = await prisma.transaction.aggregate({ where: { type: "EXPENSE", date: { gte: liveDate } }, _sum: { amount: true } });
   const totalExpense = Number(expenses._sum.amount ?? 0);
-  const orderCount = await prisma.salesOrder.count({ where: { status: "DELIVERED" } });
+  const orderCount = await prisma.salesOrder.count({ where: { status: "DELIVERED", createdAt: { gte: liveDate } } });
 
   // AR/AP
-  const ar = await prisma.invoice.aggregate({ where: { type: "AR", status: { not: "CANCELLED" } }, _sum: { balanceDue: true, totalAmount: true } });
-  const ap = await prisma.invoice.aggregate({ where: { type: "AP", status: { not: "CANCELLED" } }, _sum: { balanceDue: true, totalAmount: true } });
+  const ar = await prisma.invoice.aggregate({ where: { type: "AR", status: { not: "CANCELLED" }, createdAt: { gte: liveDate } }, _sum: { balanceDue: true, totalAmount: true } });
+  const ap = await prisma.invoice.aggregate({ where: { type: "AP", status: { not: "CANCELLED" }, createdAt: { gte: liveDate } }, _sum: { balanceDue: true, totalAmount: true } });
 
   // Product sales
   const topProducts = await prisma.$queryRawUnsafe<Array<{ name: string; qty: number; revenue: number }>>(
-    `SELECT p.name, SUM(i.qty)::int as qty, SUM(i."sellTotal")::decimal as revenue FROM "SalesOrderItem" i JOIN "Product" p ON p.id = i."productId" JOIN "SalesOrder" so ON so.id = i."salesOrderId" WHERE so.status = 'DELIVERED' GROUP BY p.name ORDER BY revenue DESC LIMIT 10`
+    `SELECT p.name, SUM(i.qty)::int as qty, SUM(i."sellTotal")::decimal as revenue FROM "SalesOrderItem" i JOIN "Product" p ON p.id = i."productId" JOIN "SalesOrder" so ON so.id = i."salesOrderId" WHERE so.status = 'DELIVERED' AND so."createdAt" >= '2026-07-10' GROUP BY p.name ORDER BY revenue DESC LIMIT 10`
   );
 
   return (
@@ -40,11 +42,11 @@ export default async function ReportsPage() {
         <span style={{ fontSize: 24 }}>📊</span> Lỗ lãi (P&L)
       </h2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "var(--space-3)", marginBottom: "var(--space-8)" }}>
-        <StatCard label="Doanh thu" value={revenue.toLocaleString("vi-VN") + " đ"} color="var(--color-success)" icon="📈" />
-        <StatCard label="Giá vốn" value={cogs.toLocaleString("vi-VN") + " đ"} color="var(--color-destructive)" icon="📉" />
-        <StatCard label="Lãi gộp" value={(revenue - cogs).toLocaleString("vi-VN") + " đ"} color="var(--color-primary)" icon="💰" />
-        <StatCard label="Chi phí" value={totalExpense.toLocaleString("vi-VN") + " đ"} color="var(--color-warning)" icon="💸" />
-        <StatCard label="Lãi ròng" value={(revenue - cogs - totalExpense).toLocaleString("vi-VN") + " đ"} color={revenue - cogs - totalExpense >= 0 ? "var(--color-success)" : "var(--color-destructive)"} icon="💎" />
+        <StatCard label="Doanh thu" value={Math.round(revenue).toLocaleString("vi-VN") + " đ"} color="var(--color-success)" icon="📈" />
+        <StatCard label="Giá vốn" value={Math.round(cogs).toLocaleString("vi-VN") + " đ"} color="var(--color-destructive)" icon="📉" />
+        <StatCard label="Lãi gộp" value={Math.round(revenue - cogs).toLocaleString("vi-VN") + " đ"} color="var(--color-primary)" icon="💰" />
+        <StatCard label="Chi phí" value={Math.round(totalExpense).toLocaleString("vi-VN") + " đ"} color="var(--color-warning)" icon="💸" />
+        <StatCard label="Lãi ròng" value={Math.round(revenue - cogs - totalExpense).toLocaleString("vi-VN") + " đ"} color={revenue - cogs - totalExpense >= 0 ? "var(--color-success)" : "var(--color-destructive)"} icon="💎" />
         <StatCard label="Đơn đã giao" value={String(orderCount)} color="var(--color-foreground)" icon="📦" />
       </div>
 
@@ -65,11 +67,11 @@ export default async function ReportsPage() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "var(--space-1)", gap: 8 }}>
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", marginBottom: 2, fontWeight: 500 }}>Tổng nợ đã xuất</div>
-              <div style={{ fontSize: "var(--text-lg)", fontWeight: 700, letterSpacing: "-0.5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{Number(ar._sum.totalAmount ?? 0).toLocaleString("vi-VN")} đ</div>
+              <div style={{ fontSize: "var(--text-lg)", fontWeight: 700, letterSpacing: "-0.5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{Math.round(Number(ar._sum.totalAmount ?? 0)).toLocaleString("vi-VN")} đ</div>
             </div>
             <div style={{ textAlign: "right", minWidth: 0, flex: 1 }}>
               <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", marginBottom: 2, fontWeight: 500 }}>Số tiền chưa thu</div>
-              <div style={{ fontSize: "var(--text-base)", fontWeight: 700, color: "var(--color-destructive)", letterSpacing: "-0.5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{Number(ar._sum.balanceDue ?? 0).toLocaleString("vi-VN")} đ</div>
+              <div style={{ fontSize: "var(--text-base)", fontWeight: 700, color: "var(--color-destructive)", letterSpacing: "-0.5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{Math.round(Number(ar._sum.balanceDue ?? 0)).toLocaleString("vi-VN")} đ</div>
             </div>
           </div>
           <div style={{ width: "100%", height: 6, background: "var(--color-muted)", borderRadius: 3, overflow: "hidden", marginTop: 2 }}>
@@ -92,11 +94,11 @@ export default async function ReportsPage() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "var(--space-1)", gap: 8 }}>
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", marginBottom: 2, fontWeight: 500 }}>Tổng nợ đã nhập</div>
-              <div style={{ fontSize: "var(--text-lg)", fontWeight: 700, letterSpacing: "-0.5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{Number(ap._sum.totalAmount ?? 0).toLocaleString("vi-VN")} đ</div>
+              <div style={{ fontSize: "var(--text-lg)", fontWeight: 700, letterSpacing: "-0.5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{Math.round(Number(ap._sum.totalAmount ?? 0)).toLocaleString("vi-VN")} đ</div>
             </div>
             <div style={{ textAlign: "right", minWidth: 0, flex: 1 }}>
               <div style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)", marginBottom: 2, fontWeight: 500 }}>Số tiền chưa trả</div>
-              <div style={{ fontSize: "var(--text-base)", fontWeight: 700, color: "var(--color-warning)", letterSpacing: "-0.5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{Number(ap._sum.balanceDue ?? 0).toLocaleString("vi-VN")} đ</div>
+              <div style={{ fontSize: "var(--text-base)", fontWeight: 700, color: "var(--color-warning)", letterSpacing: "-0.5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{Math.round(Number(ap._sum.balanceDue ?? 0)).toLocaleString("vi-VN")} đ</div>
             </div>
           </div>
           <div style={{ width: "100%", height: 6, background: "var(--color-muted)", borderRadius: 3, overflow: "hidden", marginTop: 2 }}>
@@ -129,7 +131,7 @@ export default async function ReportsPage() {
                   </td>
                   <td style={{ padding: "var(--space-3) var(--space-5)", fontWeight: 600, fontSize: "var(--text-sm)" }}>{p.name}</td>
                   <td style={{ padding: "var(--space-3) var(--space-5)", textAlign: "right", fontWeight: 600 }}>{p.qty}</td>
-                  <td style={{ padding: "var(--space-3) var(--space-5)", textAlign: "right", fontWeight: 700, color: "var(--color-success)" }}>{Number(p.revenue).toLocaleString("vi-VN")} đ</td>
+                  <td style={{ padding: "var(--space-3) var(--space-5)", textAlign: "right", fontWeight: 700, color: "var(--color-success)" }}>{Math.round(Number(p.revenue)).toLocaleString("vi-VN")} đ</td>
                 </tr>
               ))
             }

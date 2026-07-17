@@ -18,6 +18,8 @@ export interface PlBucket {
 
 export class DashboardService {
   static async getExecutiveStats() {
+    const liveDate = new Date("2026-07-10T00:00:00Z");
+
     // 1. Lấy Tổng tiền hiện có (Tiền tươi)
     const accounts = await prisma.account.aggregate({
       _sum: { balance: true },
@@ -28,13 +30,13 @@ export class DashboardService {
     // 2. Lấy Tổng Phải Thu (AR) và Phải Trả (AP)
     const receivables = await prisma.invoice.aggregate({
       _sum: { balanceDue: true },
-      where: { type: "AR", status: { in: ["OPEN", "PARTIAL"] } },
+      where: { type: "AR", status: { in: ["OPEN", "PARTIAL"] }, createdAt: { gte: liveDate } },
     });
     const totalAR = receivables._sum.balanceDue?.toNumber() || 0;
 
     const payables = await prisma.invoice.aggregate({
       _sum: { balanceDue: true },
-      where: { type: "AP", status: { in: ["OPEN", "PARTIAL"] } },
+      where: { type: "AP", status: { in: ["OPEN", "PARTIAL"] }, createdAt: { gte: liveDate } },
     });
     const totalAP = payables._sum.balanceDue?.toNumber() || 0;
 
@@ -48,7 +50,8 @@ export class DashboardService {
       where: {
         salesOrder: {
           saleDate: { gte: startOfMonth },
-          status: { in: ["DELIVERED"] } // Chỉ tính đơn đã giao
+          status: { in: ["DELIVERED"] }, // Chỉ tính đơn đã giao
+          createdAt: { gte: liveDate }
         }
       }
     });
@@ -93,8 +96,9 @@ export class DashboardService {
       granularity = "month";
     }
 
+    const liveDate = new Date("2026-07-10T00:00:00Z");
     const txns = await prisma.transaction.findMany({
-      where: { date: { gte: start, lte: end } },
+      where: { date: { gte: start, lte: end }, createdAt: { gte: liveDate } },
       select: { type: true, amount: true, date: true },
     });
 
