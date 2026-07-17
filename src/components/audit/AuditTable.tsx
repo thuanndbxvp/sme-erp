@@ -67,7 +67,7 @@ function formatMetadata(meta: any) {
         }
 
         if (k === "reason" && REASON_LABELS[value]) {
-          value = REASON_LABELS[value];
+          value = REASON_LABELS[value] as string;
         }
 
         return (
