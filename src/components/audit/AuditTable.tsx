@@ -24,22 +24,61 @@ const ENTITY_MAP: Record<string, string> = {
   WarehouseInventory: "TỒN KHO"
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const META_KEYS_MAP: Record<string, string> = {
+  type: "Loại",
+  amount: "Số tiền",
+  accountId: "Mã Quỹ",
+  reason: "Lý do",
+  quantity: "Số lượng",
+  orderCode: "Mã ĐH",
+  adjustType: "Thao tác",
+  oldQty: "Tồn cũ",
+  newQty: "Tồn mới",
+  oldQuantity: "Tồn kho cũ",
+  newQuantity: "Tồn kho mới",
+  delta: "Mức thay đổi",
+  productId: "Mã SP",
+  warehouseId: "Mã Kho"
+};
+
+const REASON_LABELS: Record<string, string> = {
+  INITIAL_BALANCE: "Tồn đầu kỳ",
+  PURCHASE_RECEIPT: "Nhập mua hàng",
+  SALES_SHIPMENT: "Xuất bán hàng",
+  RETURN_IN: "Khách trả hàng",
+  RETURN_OUT: "Trả hàng NCC",
+  ADJUST_IN: "Điều chỉnh tăng",
+  ADJUST_OUT: "Điều chỉnh giảm",
+  DROPSHIP_IN: "Nhập ảo (Dropship)",
+  DROPSHIP_OUT: "Xuất ảo (Dropship)",
+};
+
 function formatMetadata(meta: any) {
   if (!meta || Object.keys(meta).length === 0) return "—";
-  return Object.entries(meta).map(([k, v]) => {
-    let key = k;
-    if (k === "type") key = "Loại";
-    if (k === "amount") key = "Số tiền";
-    if (k === "accountId") key = "Mã Quỹ";
-    if (k === "reason") key = "Lý do";
-    if (k === "quantity") key = "Số lượng";
-    if (k === "orderCode") key = "Mã ĐH";
-    if (k === "adjustType") key = "Thao tác";
-    if (k === "oldQty") key = "Tồn cũ";
-    if (k === "newQty") key = "Tồn mới";
-    return `${key}: ${v}`;
-  }).join(" | ");
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", alignItems: "center" }}>
+      {Object.entries(meta).map(([k, v], idx, arr) => {
+        let key = META_KEYS_MAP[k] || k;
+        let value = String(v);
+
+        if (k === "productId" || k === "warehouseId") {
+          value = value.substring(0, 6) + "..."; // Làm ngắn UUID
+        }
+
+        if (k === "reason" && REASON_LABELS[value]) {
+          value = REASON_LABELS[value];
+        }
+
+        return (
+          <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            <span style={{ color: "var(--color-foreground-muted)" }}>{key}:</span>
+            <b style={{ color: "var(--color-foreground)" }}>{value}</b>
+            {idx < arr.length - 1 && <span style={{ color: "var(--color-muted)", marginLeft: "var(--space-2)" }}>|</span>}
+          </span>
+        );
+      })}
+    </div>
+  );
 }
 
 export default function AuditTable({ logs }: Props) {
@@ -76,7 +115,7 @@ export default function AuditTable({ logs }: Props) {
                   <td style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 500 }}>{ENTITY_MAP[log.entityType] || log.entityType}</td>
                   <td style={{ padding: "var(--space-3) var(--space-4)", fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)" }}>
                     <div style={{ marginBottom: 4, fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--color-muted-foreground)" }}>ID: {log.entityId}</div>
-                    <div>{formatMetadata(log.metadata)}</div>
+                    {formatMetadata(log.metadata)}
                   </td>
                   <td style={{ padding: "var(--space-3) var(--space-4)", whiteSpace: "nowrap", textAlign: "right" }}>{new Date(log.createdAt).toLocaleString("vi-VN")}</td>
                 </tr>

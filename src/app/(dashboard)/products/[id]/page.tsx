@@ -7,6 +7,18 @@ export const dynamic = "force-dynamic";
 
 type Params = { params: Promise<{ id: string }> };
 
+const REASON_LABELS: Record<string, string> = {
+  INITIAL_BALANCE: "Tồn đầu kỳ",
+  PURCHASE_RECEIPT: "Nhập mua hàng",
+  SALES_SHIPMENT: "Xuất bán hàng",
+  RETURN_IN: "Khách trả hàng",
+  RETURN_OUT: "Trả hàng NCC",
+  ADJUST_IN: "Điều chỉnh tăng",
+  ADJUST_OUT: "Điều chỉnh giảm",
+  DROPSHIP_IN: "Nhập ảo (Dropship)",
+  DROPSHIP_OUT: "Xuất ảo (Dropship)",
+};
+
 export default async function ProductDetailPage({ params }: Params) {
   const { id } = await params;
   const product = await prisma.product.findUnique({
@@ -95,7 +107,7 @@ export default async function ProductDetailPage({ params }: Params) {
                 <tr key={m.id} style={{ borderBottom: i < product.movements.length - 1 ? "1px solid var(--color-muted)" : "none", background: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-hover)" }}>
                   <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>{i + 1}</td>
                   <td style={{ padding: "var(--space-3) var(--space-4)" }}><span style={{ color: m.type === "IN" ? "var(--color-success)" : "var(--color-destructive)", fontWeight: 600 }}>{m.type === "IN" ? "Nhập" : "Xuất"}</span></td>
-                  <td style={{ padding: "var(--space-3) var(--space-4)", fontSize: "var(--text-xs)" }}>{m.reason}</td>
+                  <td style={{ padding: "var(--space-3) var(--space-4)", fontSize: "var(--text-xs)" }}>{REASON_LABELS[m.reason] || m.reason}</td>
                   <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right", fontWeight: 600 }}>{m.quantity}</td>
                   <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right" }}>{Number(m.unitCost).toLocaleString("vi-VN")}</td>
                   <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right" }}>{Number(m.totalCost).toLocaleString("vi-VN")}</td>
