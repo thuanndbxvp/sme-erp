@@ -98,7 +98,7 @@ export class DashboardService {
 
     const liveDate = new Date("2026-07-10T00:00:00Z");
     const txns = await prisma.transaction.findMany({
-      where: { date: { gte: start, lte: end }, createdAt: { gte: liveDate } },
+      where: { date: { gte: start < liveDate ? liveDate : start, lte: end } },
       select: { type: true, amount: true, date: true },
     });
 
