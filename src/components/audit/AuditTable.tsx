@@ -14,11 +14,14 @@ const ACTION_MAP: Record<string, string> = {
   CANCEL: "HỦY BỎ",
   APPROVE: "PHÊ DUYỆT",
   LOGIN: "ĐĂNG NHẬP",
-  LOGOUT: "ĐĂNG XUẤT"
+  LOGOUT: "ĐĂNG XUẤT",
+  PAY: "THANH TOÁN",
+  REFUND: "HOÀN TIỀN"
 };
 
 const ENTITY_MAP: Record<string, string> = {
   TRANSACTION: "GIAO DỊCH TIỀN",
+  Transaction: "GIAO DỊCH",
   InventoryMovement: "BIẾN ĐỘNG KHO",
   SalesOrder: "ĐƠN BÁN HÀNG",
   PurchaseOrder: "ĐƠN MUA HÀNG",
@@ -32,65 +35,75 @@ const ENTITY_MAP: Record<string, string> = {
   PaymentApplication: "GẠCH NỢ",
   Warehouse: "KHO HÀNG",
   CashAccount: "QUỸ TIỀN",
-  AuditLog: "NHẬT KÝ"
+  Account: "TÀI KHOẢN TÀI CHÍNH",
+  AuditLog: "NHẬT KÝ",
+  Payout: "BẢNG LƯƠNG/HOA HỒNG",
+  CommissionRule: "CẤU HÌNH HOA HỒNG",
+  EmployeeTransaction: "GIAO DỊCH NHÂN VIÊN"
 };
 
 const META_KEYS_MAP: Record<string, string> = {
-  type: "Loại",
+  type: "Phân loại",
   amount: "Số tiền",
   accountId: "Mã Quỹ",
-  reason: "Lý do",
+  reason: "Lý do phát sinh",
   quantity: "Số lượng",
-  orderCode: "Mã ĐH",
-  adjustType: "Thao tác",
-  oldQty: "Tồn cũ",
-  newQty: "Tồn mới",
+  orderCode: "Mã chứng từ",
+  adjustType: "Thao tác điều chỉnh",
+  oldQty: "Tồn kho cũ",
+  newQty: "Tồn kho mới",
   oldQuantity: "Tồn kho cũ",
   newQuantity: "Tồn kho mới",
   delta: "Mức thay đổi",
-  productId: "Mã SP",
-  warehouseId: "Mã Kho",
-  productName: "Sản phẩm",
-  warehouseName: "Kho hàng",
+  productId: "Mã sản phẩm",
+  warehouseId: "Mã kho hàng",
+  productName: "Tên sản phẩm",
+  warehouseName: "Tên kho hàng",
   message: "Ghi chú hệ thống",
-  note: "Ghi chú",
-  status: "Trạng thái",
+  note: "Ghi chú của người dùng",
+  status: "Trạng thái hiện tại",
   fromStatus: "Từ trạng thái",
-  toStatus: "Sang trạng thái",
-  balanceDue: "Dư nợ",
-  totalAmount: "Tổng tiền",
-  email: "Email đăng nhập",
-  role: "Quyền",
-  fulfillmentType: "Hình thức giao"
+  toStatus: "Chuyển sang trạng thái",
+  balanceDue: "Dư nợ cần thu/trả",
+  totalAmount: "Tổng giá trị",
+  email: "Tài khoản Email",
+  role: "Vai trò",
+  fulfillmentType: "Hình thức giao nhận",
+  buyPrice: "Giá nhập mới",
+  sellPrice: "Giá bán mới",
+  customerName: "Tên khách hàng",
+  supplierName: "Tên nhà cung cấp",
+  salespersonId: "Mã nhân viên"
 };
 
 const REASON_LABELS: Record<string, string> = {
-  INITIAL_BALANCE: "Tồn đầu kỳ",
-  PURCHASE_RECEIPT: "Nhập mua hàng",
-  SALES_SHIPMENT: "Xuất bán hàng",
-  RETURN_IN: "Khách trả hàng",
-  RETURN_OUT: "Trả hàng NCC",
-  ADJUST_IN: "Điều chỉnh tăng",
-  ADJUST_OUT: "Điều chỉnh giảm",
-  DROPSHIP_IN: "Nhập ảo (Dropship)",
-  DROPSHIP_OUT: "Xuất ảo (Dropship)",
+  INITIAL_BALANCE: "Khai báo tồn kho đầu kỳ",
+  PURCHASE_RECEIPT: "Nhập kho (Mua hàng)",
+  SALES_SHIPMENT: "Xuất kho (Bán hàng)",
+  RETURN_IN: "Nhập lại kho (Khách trả hàng)",
+  RETURN_OUT: "Xuất kho (Trả hàng nhà cung cấp)",
+  ADJUST_IN: "Điều chỉnh kiểm kê (Tăng)",
+  ADJUST_OUT: "Điều chỉnh kiểm kê (Giảm)",
+  DROPSHIP_IN: "Nhập hàng ảo (Giao thẳng)",
+  DROPSHIP_OUT: "Xuất hàng ảo (Giao thẳng)",
 };
 
 const VALUE_MAP: Record<string, string> = {
-  "IN": "Tăng (Thu/Nhập)",
-  "OUT": "Giảm (Chi/Xuất)",
-  "AR": "Phải thu",
-  "AP": "Phải trả",
-  "PENDING": "Chờ xử lý",
-  "ORDERED": "Đã đặt hàng",
-  "RECEIVED": "Đã nhận hàng",
-  "DELIVERED": "Đã giao hàng",
-  "CANCELLED": "Đã hủy",
-  "OPEN": "Mở",
-  "PARTIAL": "Một phần",
-  "PAID": "Đã thanh toán",
-  "DROPSHIP": "Giao thẳng",
-  "STOCK": "Kho thường"
+  "IN": "Tăng (Thu tiền/Nhập kho)",
+  "OUT": "Giảm (Chi tiền/Xuất kho)",
+  "AR": "Phiếu phải thu",
+  "AP": "Phiếu phải trả",
+  "PENDING": "Đang chờ xử lý",
+  "ORDERED": "Đã đặt hàng xong",
+  "RECEIVED": "Đã nhập kho xong",
+  "DELIVERED": "Đã giao hàng xong",
+  "CANCELLED": "Đã bị hủy bỏ",
+  "OPEN": "Chưa thanh toán",
+  "PARTIAL": "Thanh toán một phần",
+  "PAID": "Đã thanh toán xong",
+  "DROPSHIP": "Giao thẳng từ NCC",
+  "STOCK": "Giao từ kho công ty",
+  "WAREHOUSE": "Giao từ kho công ty"
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -102,19 +115,19 @@ function formatMetadata(meta: any) {
         const key = META_KEYS_MAP[k] || k;
         let value = String(v);
 
-        // Xử lý các mã ID dài
+        // Xử lý các mã ID dài để tránh người dùng thấy quá nhiều mã kỹ thuật
         if (value.startsWith("cmr") && value.length > 20) {
-          value = value.substring(0, 6) + "..."; 
-        }
-
-        if (k === "reason" && REASON_LABELS[value]) {
-          value = REASON_LABELS[value] as string;
-        } else if (VALUE_MAP[value]) {
-          value = VALUE_MAP[value] as string;
+          value = `Mã: ${value.substring(value.length - 6).toUpperCase()}`; 
+        } else if (k === "amount" || k === "totalAmount" || k === "balanceDue" || k === "buyPrice" || k === "sellPrice") {
+          const num = Number(value);
+          if (!isNaN(num)) value = num.toLocaleString("vi-VN") + " đ";
+        } else {
+          if (k === "reason" && REASON_LABELS[value]) value = REASON_LABELS[value] as string;
+          else if (VALUE_MAP[value]) value = VALUE_MAP[value] as string;
         }
 
         return (
-          <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "var(--color-surface-hover)", padding: "2px 6px", borderRadius: 4, border: "1px solid var(--color-border)" }}>
+          <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "var(--color-surface-hover)", padding: "2px 8px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: "0.8rem" }}>
             <span style={{ color: "var(--color-foreground-muted)" }}>{key}:</span>
             <b style={{ color: "var(--color-foreground)" }}>{value}</b>
           </span>
@@ -137,11 +150,11 @@ export default function AuditTable({ logs }: Props) {
           <thead>
             <tr style={{ borderBottom: "1px solid var(--color-border)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--color-foreground-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
               <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center", width: 50 }}>STT</th>
-              <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left", width: 150 }}>Người thực hiện</th>
-              <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left", width: 120 }}>Hành động</th>
-              <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left", width: 150 }}>Loại dữ liệu</th>
-              <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>Chi tiết (Metadata)</th>
-              <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right", width: 160 }}>Thời gian</th>
+              <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left", width: 160 }}>Người thực hiện</th>
+              <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left", width: 130 }}>Thao tác</th>
+              <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left", width: 180 }}>Chuyên mục</th>
+              <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "left" }}>Thông tin chi tiết</th>
+              <th style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right", width: 160 }}>Thời điểm</th>
             </tr>
           </thead>
           <tbody>
@@ -150,22 +163,24 @@ export default function AuditTable({ logs }: Props) {
                 <td colSpan={6} style={{ padding: "var(--space-10)", textAlign: "center", color: "var(--color-foreground-muted)" }}>Chưa có hoạt động nào</td>
               </tr>
             ) : (
-              displayData.map((log, i) => (
-                <tr key={log.id} style={{ borderBottom: i < displayData.length - 1 ? "1px solid var(--color-muted)" : "none", background: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-hover)" }}>
-                  <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>{(currentPage - 1) * pageSize + i + 1}</td>
-                  <td style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 600 }}>{log.userName}</td>
-                  <td style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 600, color: log.action === "DELETE" ? "var(--color-destructive)" : log.action === "CREATE" ? "var(--color-success)" : "var(--color-warning)" }}>{ACTION_MAP[log.action] || log.action}</td>
-                  <td style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 500 }}>{ENTITY_MAP[log.entityType] || log.entityType}</td>
-                  <td style={{ padding: "var(--space-3) var(--space-4)", fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)" }}>
-                    <div style={{ marginBottom: 4, fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--color-muted-foreground)" }}>
-                      {log.action === "DELETE" ? "Mã đối tượng đã xoá: " : "Mã đối tượng (ID): "} 
-                      {log.entityId}
-                    </div>
-                    {formatMetadata(log.metadata)}
-                  </td>
-                  <td style={{ padding: "var(--space-3) var(--space-4)", whiteSpace: "nowrap", textAlign: "right" }}>{new Date(log.createdAt).toLocaleString("vi-VN")}</td>
-                </tr>
-              ))
+              displayData.map((log, i) => {
+                const shortId = log.entityId.substring(log.entityId.length - 6).toUpperCase();
+                return (
+                  <tr key={log.id} style={{ borderBottom: i < displayData.length - 1 ? "1px solid var(--color-muted)" : "none", background: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-hover)" }}>
+                    <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>{(currentPage - 1) * pageSize + i + 1}</td>
+                    <td style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 600 }}>{log.userName}</td>
+                    <td style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 600, color: log.action === "DELETE" ? "var(--color-destructive)" : log.action === "CREATE" ? "var(--color-success)" : "var(--color-warning)" }}>{ACTION_MAP[log.action] || log.action}</td>
+                    <td style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 500 }}>{ENTITY_MAP[log.entityType] || log.entityType}</td>
+                    <td style={{ padding: "var(--space-3) var(--space-4)" }}>
+                      <div style={{ marginBottom: 4, fontSize: "0.75rem", color: "var(--color-muted-foreground)" }}>
+                        ID Hệ thống: <span title={log.entityId} style={{ background: "var(--color-muted)", padding: "1px 4px", borderRadius: 4, fontFamily: "var(--font-mono)" }}>#{shortId}</span>
+                      </div>
+                      {formatMetadata(log.metadata)}
+                    </td>
+                    <td style={{ padding: "var(--space-3) var(--space-4)", whiteSpace: "nowrap", textAlign: "right", fontSize: "0.8rem", color: "var(--color-foreground-muted)" }}>{new Date(log.createdAt).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" })}</td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
