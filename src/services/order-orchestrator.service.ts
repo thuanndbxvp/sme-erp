@@ -40,6 +40,8 @@ export interface OrchestratorMeta {
   note?: string;
   /** Account dùng để hoàn tiền dư khi balanceDue < 0 sau khi giảm totalAmount. */
   refundAccountId?: string;
+  skipLinkedPurchaseOrder?: boolean;
+  skipLinkedSalesOrder?: boolean;
 }
 
 export interface UpdateSalesOrderInput {
@@ -161,31 +163,10 @@ export class OrderOrchestrator {
     meta: OrchestratorMeta = {},
     prisma: PrismaClient = defaultPrisma,
   ) {
-    return prisma.$transaction(async (tx) => {
-      const locked = await tx.$queryRaw<
-        Array<{ id: string; status: string; fulfillmentType: string; warehouseId: string | null; linkedPurchaseOrderId: string | null }>
-      >`SELECT "id","status","fulfillmentType","warehouseId","linkedPurchaseOrderId" FROM "SalesOrder" WHERE "id"=${salesOrderId} FOR UPDATE`;
-      const row = locked[0];
-      if (!row) throw new NotFoundError("Đơn bán", salesOrderId);
-
-      const oldStatus = row.status as "PENDING" | "DELIVERED" | "CANCELLED";
-      assertTransition(SALES_ORDER_TRANSITIONS, oldStatus, "CANCELLED", "SalesOrder");
-
-      if (oldStatus === "DELIVERED") {
-        await OrderFulfillmentService.returnSalesItems(tx, salesOrderId, row.fulfillmentType, row.warehouseId, { userId: meta.userId });
-      }
-
-      await OrderBillingService.cancelSalesInvoice(tx, salesOrderId);
-
-      await tx.salesOrder.update({ where: { id: salesOrderId }, data: { status: "CANCELLED", deliveredDate: null } });
-      await tx.orderStatusHistory.create({ data: { referenceType: REFERENCE_TYPE.SALES_ORDER, referenceId: salesOrderId, fromStatus: oldStatus, toStatus: "CANCELLED", userId: meta.userId ?? null, note: meta.note ?? "Hủy đơn" } });
-
-      if (row.fulfillmentType === "DROPSHIP" && row.linkedPurchaseOrderId) {
-        await cancelPurchaseOrderInternal(tx, row.linkedPurchaseOrderId, meta);
-      }
-
-      return tx.salesOrder.findUniqueOrThrow({ where: { id: salesOrderId }, include: { items: true } });
-    }, { maxWait: 15_000, timeout: 30_000 });
+    return prisma.$transaction(
+      (tx) => cancelSalesOrderInternal(tx, salesOrderId, meta),
+      { maxWait: 15_000, timeout: 30_000 }
+    );
   }
 
   static async cancelPurchaseOrder(
@@ -533,6 +514,40 @@ export class OrderOrchestrator {
 
 // ===== Internal =====
 
+async function cancelSalesOrderInternal(
+  tx: Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0],
+  salesOrderId: string,
+  meta: OrchestratorMeta,
+) {
+  const locked = await tx.$queryRaw<
+    Array<{ id: string; status: string; fulfillmentType: string; warehouseId: string | null; linkedPurchaseOrderId: string | null }>
+  >`SELECT "id","status","fulfillmentType","warehouseId","linkedPurchaseOrderId" FROM "SalesOrder" WHERE "id"=${salesOrderId} FOR UPDATE`;
+  const row = locked[0];
+  if (!row) throw new NotFoundError("Đơn bán", salesOrderId);
+
+  const oldStatus = row.status as "PENDING" | "DELIVERED" | "CANCELLED";
+  if (oldStatus === "CANCELLED") {
+    return tx.salesOrder.findUniqueOrThrow({ where: { id: salesOrderId }, include: { items: true } });
+  }
+
+  assertTransition(SALES_ORDER_TRANSITIONS, oldStatus, "CANCELLED", "SalesOrder");
+
+  if (oldStatus === "DELIVERED") {
+    await OrderFulfillmentService.returnSalesItems(tx, salesOrderId, row.fulfillmentType, row.warehouseId, { userId: meta.userId });
+  }
+
+  await OrderBillingService.cancelSalesInvoice(tx, salesOrderId);
+
+  await tx.salesOrder.update({ where: { id: salesOrderId }, data: { status: "CANCELLED", deliveredDate: null } });
+  await tx.orderStatusHistory.create({ data: { referenceType: REFERENCE_TYPE.SALES_ORDER, referenceId: salesOrderId, fromStatus: oldStatus, toStatus: "CANCELLED", userId: meta.userId ?? null, note: meta.note ?? "Hủy đơn" } });
+
+  if (!meta.skipLinkedPurchaseOrder && row.fulfillmentType === "DROPSHIP" && row.linkedPurchaseOrderId) {
+    await cancelPurchaseOrderInternal(tx, row.linkedPurchaseOrderId, { ...meta, skipLinkedSalesOrder: true });
+  }
+
+  return tx.salesOrder.findUniqueOrThrow({ where: { id: salesOrderId }, include: { items: true } });
+}
+
 async function cancelPurchaseOrderInternal(
   tx: Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0],
   purchaseOrderId: string,
@@ -559,6 +574,15 @@ async function cancelPurchaseOrderInternal(
 
   await tx.purchaseOrder.update({ where: { id: purchaseOrderId }, data: { status: "CANCELLED", receivedDate: null } });
   await tx.orderStatusHistory.create({ data: { referenceType: REFERENCE_TYPE.PURCHASE_ORDER, referenceId: purchaseOrderId, fromStatus: oldStatus, toStatus: "CANCELLED", userId: meta.userId ?? null, note: meta.note ?? "Hủy đơn" } });
+
+  if (!meta.skipLinkedSalesOrder) {
+    const linkedSalesOrders = await tx.salesOrder.findMany({
+      where: { linkedPurchaseOrderId: purchaseOrderId, status: { not: "CANCELLED" } }
+    });
+    for (const so of linkedSalesOrders) {
+      await cancelSalesOrderInternal(tx, so.id, { ...meta, skipLinkedPurchaseOrder: true });
+    }
+  }
 
   return tx.purchaseOrder.findUniqueOrThrow({ where: { id: purchaseOrderId }, include: { items: true } });
 }

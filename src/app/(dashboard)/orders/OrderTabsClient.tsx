@@ -232,6 +232,9 @@ export default function OrderTabsClient({ salesOrders, purchaseOrders, initialTa
                       <li><strong>Kho hàng:</strong> Hoàn lại số lượng tồn kho (nếu đơn hàng đã được giao/nhận trước đó).</li>
                       <li><strong>Tài chính:</strong> Xóa bỏ công nợ tương ứng (AR/AP). Thu hồi doanh thu/lãi gộp đã ghi nhận.</li>
                       <li><strong>Dòng tiền:</strong> Nếu đơn đã được thanh toán, số tiền đã trả sẽ trở thành khoản dư (cần hoàn trả hoặc cấn trừ).</li>
+                      {confirmModal.action === "CANCEL" && initialTab === "PO" && (
+                        <li style={{ color: "var(--color-destructive)" }}><strong>Lưu ý Dropship:</strong> Nếu đây là đơn mua Dropship, hệ thống sẽ <b>tự động HỦY luôn đơn bán liên kết</b> với đơn mua này.</li>
+                      )}
                     </>
                   )}
                 </ul>

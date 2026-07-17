@@ -1,7 +1,3 @@
-// SME ERP — schema core (P0-2): danh mục + hạ tầng.
-// Model đơn hàng / hóa đơn / kho chi tiết sẽ thêm ở các phase sau (P1+).
-// Nguyên tắc: 1 nguồn sự thật, tiền = Decimal(15,2), KHÔNG kế toán kép.
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,27 +7,24 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ===== RBAC / NGƯỜI DÙNG =====
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  name         String
-  passwordHash String
-  roleId       String?
-  role         Role?     @relation(fields: [roleId], references: [id])
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  payouts              Payout[]
-  employeeTransactions EmployeeTransaction[]
+  id                   String                @id @default(cuid())
+  email                String                @unique
+  name                 String
+  passwordHash         String
+  roleId               String?
+  isActive             Boolean               @default(true)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
   employeeProfile      EmployeeProfile?
+  employeeTransactions EmployeeTransaction[]
+  payouts              Payout[]
   payslips             Payslip[]
+  role                 Role?                 @relation(fields: [roleId], references: [id])
 
   @@index([roleId])
 }
 
-// Hồ sơ tài chính nhân viên (MSEW-payroll-hr): lương cứng + STK ngân hàng.
 model EmployeeProfile {
   id          String   @id @default(cuid())
   userId      String   @unique
@@ -40,19 +33,13 @@ model EmployeeProfile {
   bankAccount String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// Phiếu lương (MSEW-payroll-hr-phase2): lịch sử chốt lương cuối tháng.
-// Idempotent: @@unique([userId, month, year]) chặn chốt 2 lần cùng kỳ.
-// baseSalaryAmount + commissionAmount = TỔNG GROSS; advanceDeduction = cấn trừ nợ;
-// netPay = gross - advanceDeduction (số Két công ty chi thực tế).
-// transactionId liên kết Phiếu Chi Sổ Quỹ (audit trail 2 phía).
 model Payslip {
   id               String   @id @default(cuid())
   userId           String
-  month            Int      // 1-12
+  month            Int
   year             Int
   baseSalaryAmount Decimal  @db.Decimal(15, 2)
   commissionAmount Decimal  @db.Decimal(15, 2)
@@ -60,8 +47,7 @@ model Payslip {
   netPay           Decimal  @db.Decimal(15, 2)
   transactionId    String?
   createdAt        DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, month, year])
   @@index([userId])
@@ -71,128 +57,114 @@ model Role {
   id          String           @id @default(cuid())
   name        String           @unique
   description String?
-  users       User[]
-  permissions RolePermission[]
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+  permissions RolePermission[]
+  users       User[]
 }
 
 model Permission {
   id          String           @id @default(cuid())
-  code        String           @unique // vd: "product.create", "order.deliver"
+  code        String           @unique
   description String?
   roles       RolePermission[]
 }
 
-// Bảng nối Role <-> Permission (RBAC load từ DB mỗi request).
 model RolePermission {
   roleId       String
   permissionId String
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionId])
   @@index([permissionId])
 }
 
-// ===== DANH MỤC =====
 model Product {
-  id        String   @id @default(cuid())
-  sku       String   @unique
-  name      String
-  unit      String
-  buyPrice  Decimal  @default(0) @db.Decimal(15, 2) // giá nhập gần nhất (tham chiếu)
-  sellPrice Decimal  @default(0) @db.Decimal(15, 2)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  inventory      WarehouseInventory[]
-  movements      InventoryMovement[]
-  salesItems     SalesOrderItem[]
-  purchaseItems  PurchaseOrderItem[]
+  id            String               @id @default(cuid())
+  sku           String               @unique
+  name          String
+  unit          String
+  buyPrice      Decimal              @default(0) @db.Decimal(15, 2)
+  sellPrice     Decimal              @default(0) @db.Decimal(15, 2)
+  isActive      Boolean              @default(true)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  movements     InventoryMovement[]
+  purchaseItems PurchaseOrderItem[]
+  salesItems    SalesOrderItem[]
+  inventory     WarehouseInventory[]
 }
 
 model Customer {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   name        String
   phone       String?
   email       String?
-  creditLimit Decimal  @default(0) @db.Decimal(15, 2)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  salesOrders SalesOrder[]
+  creditLimit Decimal      @default(0) @db.Decimal(15, 2)
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   invoices    Invoice[]
+  salesOrders SalesOrder[]
 }
 
 model Supplier {
-  id        String   @id @default(cuid())
-  name      String
-  phone     String?
-  email     String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  purchaseOrders PurchaseOrder[]
+  id             String          @id @default(cuid())
+  name           String
+  phone          String?
+  email          String?
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
   invoices       Invoice[]
+  purchaseOrders PurchaseOrder[]
 }
 
 model Warehouse {
-  id        String   @id @default(cuid())
-  code      String   @unique
-  name      String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  inventory   WarehouseInventory[]
+  id          String               @id @default(cuid())
+  code        String               @unique
+  name        String
+  isActive    Boolean              @default(true)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
   salesOrders SalesOrder[]
+  inventory   WarehouseInventory[]
 }
 
-// Quỹ tiền mặt / ngân hàng. balance = NGUỒN SỰ THẬT số dư tiền.
 model Account {
-  id        String        @id @default(cuid())
-  code      String        @unique
-  name      String
-  balance   Decimal       @default(0) @db.Decimal(15, 2)
-  isActive  Boolean       @default(true)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-
-  transactions Transaction[]
+  id           String        @id @default(cuid())
+  code         String        @unique
+  name         String
+  balance      Decimal       @default(0) @db.Decimal(15, 2)
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   payments     Payment[]
+  transactions Transaction[]
 }
 
-// ===== KHO =====
-// Tồn theo lô. avgCost = giá vốn bình quân gia quyền (WAC) per unit.
 model WarehouseInventory {
   id          String    @id @default(cuid())
   warehouseId String
   productId   String
   quantity    Int       @default(0)
   avgCost     Decimal   @default(0) @db.Decimal(15, 2)
-  // Lệch Mục B (String?) có chủ đích: Postgres coi NULL là distinct trong unique,
-  // nên null-batch KHÔNG chặn trùng → tìm-hoặc-tạo bị race. Dùng "" = "không lô".
   batchNumber String    @default("")
   expiryDate  DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-
-  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
-  product   Product   @relation(fields: [productId], references: [id])
+  product     Product   @relation(fields: [productId], references: [id])
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
 
   @@unique([warehouseId, productId, batchNumber])
   @@index([productId])
 }
 
-// Event table — nguồn COGS/tồn. Mỗi lần nhập/xuất ghi 1 dòng bất biến.
 model InventoryMovement {
   id            String   @id @default(cuid())
-  type          String // IN | OUT
-  reason        String // PURCHASE_RECEIPT | SALES_SHIPMENT | RETURN_* | ADJUST_* | DROPSHIP_*
+  type          String
+  reason        String
   productId     String
   warehouseId   String?
   quantity      Int
@@ -201,64 +173,36 @@ model InventoryMovement {
   referenceType String
   referenceId   String
   createdAt     DateTime @default(now())
+  product       Product  @relation(fields: [productId], references: [id])
 
-  product Product @relation(fields: [productId], references: [id])
-
+  @@unique([referenceType, referenceId, reason])
   @@index([productId])
   @@index([referenceType, referenceId])
-  // Idempotent: 1 (reference, reason) chỉ sinh 1 movement.
-  @@unique([referenceType, referenceId, reason])
-}
-
-// ===== ĐƠN HÀNG =====
-enum OrderStatus {
-  PENDING
-  DELIVERED
-  CANCELLED
-}
-
-enum PurchaseStatus {
-  ORDERED
-  RECEIVED
-  CANCELLED
-}
-
-enum FulfillmentType {
-  WAREHOUSE
-  DROPSHIP
-}
-
-// DERIVE từ Invoice — KHÔNG set tay từ client (nguồn sự thật = Invoice.balanceDue).
-enum PaymentStatus {
-  UNPAID
-  PARTIAL
-  PAID
 }
 
 model SalesOrder {
-  id                    String          @id @default(cuid())
-  orderCode             String          @unique
-  status                OrderStatus     @default(PENDING)
-  paymentStatus         PaymentStatus   @default(UNPAID) // DERIVE, không set tay
-  fulfillmentType       FulfillmentType @default(WAREHOUSE)
+  id                    String           @id @default(cuid())
+  orderCode             String           @unique
+  status                OrderStatus      @default(PENDING)
+  paymentStatus         PaymentStatus    @default(UNPAID)
+  fulfillmentType       FulfillmentType  @default(WAREHOUSE)
   customerId            String
   warehouseId           String?
-  linkedPurchaseOrderId String?         @unique // dropship (điền ở P2-2)
-  salespersonId         String? // người bán → hoa hồng
-  userId                String? // người tạo
+  linkedPurchaseOrderId String?          @unique
+  salespersonId         String?
+  userId                String?
   saleDate              DateTime?
   deliveredDate         DateTime?
-  totalAmount           Decimal         @default(0) @db.Decimal(15, 2)
-  taxAmount             Decimal         @default(0) @db.Decimal(15, 2)
-  commissionAmount      Decimal         @default(0) @db.Decimal(15, 2) // MSEW-payroll-hr: hoa hồng dự kiến
-  commissionStatus      String          @default("PENDING") // PENDING | APPROVED | PAID
-  createdAt             DateTime        @default(now())
-  updatedAt             DateTime        @updatedAt
-
-  customer  Customer         @relation(fields: [customerId], references: [id])
-  warehouse Warehouse?       @relation(fields: [warehouseId], references: [id])
-  items     SalesOrderItem[]
-  invoice   Invoice?         // 1:1 ngược (FK nằm ở Invoice)
+  totalAmount           Decimal          @default(0) @db.Decimal(15, 2)
+  taxAmount             Decimal          @default(0) @db.Decimal(15, 2)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  commissionAmount      Decimal          @default(0) @db.Decimal(15, 2)
+  commissionStatus      String           @default("PENDING")
+  invoice               Invoice?
+  customer              Customer         @relation(fields: [customerId], references: [id])
+  warehouse             Warehouse?       @relation(fields: [warehouseId], references: [id])
+  items                 SalesOrderItem[]
 
   @@index([status])
   @@index([customerId, status])
@@ -266,66 +210,61 @@ model SalesOrder {
 }
 
 model SalesOrderItem {
-  id           String  @id @default(cuid())
+  id           String     @id @default(cuid())
   salesOrderId String
   productId    String?
   productName  String
   unit         String
   qty          Int
-  sellPrice    Decimal @db.Decimal(15, 2) // đơn giá
-  sellTotal    Decimal @db.Decimal(15, 2) // = sellPrice * qty (thành tiền dòng, chưa thuế)
-  baseCost     Decimal @default(0) @db.Decimal(15, 2) // ĐƠN GIÁ vốn/unit (không lẫn tổng)
-  profit       Decimal @default(0) @db.Decimal(15, 2) // chốt lúc giao — báo cáo lãi dùng field này
-  taxAmount    Decimal @default(0) @db.Decimal(15, 2)
-
-  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
-  product    Product?   @relation(fields: [productId], references: [id])
+  sellPrice    Decimal    @db.Decimal(15, 2)
+  sellTotal    Decimal    @db.Decimal(15, 2)
+  baseCost     Decimal    @default(0) @db.Decimal(15, 2)
+  profit       Decimal    @default(0) @db.Decimal(15, 2)
+  taxAmount    Decimal    @default(0) @db.Decimal(15, 2)
+  product      Product?   @relation(fields: [productId], references: [id])
+  salesOrder   SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
 
   @@index([salesOrderId])
 }
 
 model PurchaseOrder {
-  id            String         @id @default(cuid())
-  orderCode     String         @unique
-  status        PurchaseStatus @default(ORDERED)
-  paymentStatus PaymentStatus  @default(UNPAID) // DERIVE, không set tay
+  id            String              @id @default(cuid())
+  orderCode     String              @unique
+  status        PurchaseStatus      @default(ORDERED)
+  paymentStatus PaymentStatus       @default(UNPAID)
   supplierId    String
   warehouseId   String?
   userId        String?
   orderDate     DateTime?
   receivedDate  DateTime?
-  totalAmount   Decimal        @default(0) @db.Decimal(15, 2)
-  taxAmount     Decimal        @default(0) @db.Decimal(15, 2)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  supplier Supplier            @relation(fields: [supplierId], references: [id])
-  items    PurchaseOrderItem[]
-  invoice  Invoice?         // 1:1 ngược (FK nằm ở Invoice)
+  totalAmount   Decimal             @default(0) @db.Decimal(15, 2)
+  taxAmount     Decimal             @default(0) @db.Decimal(15, 2)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  invoice       Invoice?
+  supplier      Supplier            @relation(fields: [supplierId], references: [id])
+  items         PurchaseOrderItem[]
 
   @@index([status])
   @@index([supplierId, status])
 }
 
 model PurchaseOrderItem {
-  id              String  @id @default(cuid())
+  id              String        @id @default(cuid())
   purchaseOrderId String
   productId       String?
   productName     String
   unit            String
   qty             Int
-  buyPrice        Decimal @db.Decimal(15, 2) // đơn giá nhập
-  buyTotal        Decimal @db.Decimal(15, 2) // = buyPrice * qty
-  taxAmount       Decimal @default(0) @db.Decimal(15, 2)
-
-  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
-  product       Product?      @relation(fields: [productId], references: [id])
+  buyPrice        Decimal       @db.Decimal(15, 2)
+  buyTotal        Decimal       @db.Decimal(15, 2)
+  taxAmount       Decimal       @default(0) @db.Decimal(15, 2)
+  product         Product?      @relation(fields: [productId], references: [id])
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
 
   @@index([purchaseOrderId])
 }
 
-// Lịch sử chuyển trạng thái đơn (C4: updateStatus ghi history trước khi side-effect).
-// referenceType = SALES_ORDER | PURCHASE_ORDER; fromStatus null = lúc tạo.
 model OrderStatusHistory {
   id            String   @id @default(cuid())
   referenceType String
@@ -339,13 +278,10 @@ model OrderStatusHistory {
   @@index([referenceType, referenceId])
 }
 
-// ===== TIỀN & CÔNG NỢ =====
-// Transaction: ghi nhận thu/chi cập nhật balance atomic (C2).
-// cashFlowGroup = OPERATIONAL | INVESTING | FINANCING
 model Transaction {
   id              String   @id @default(cuid())
   date            DateTime @default(now())
-  type            String   // INCOME | EXPENSE
+  type            String
   amount          Decimal  @db.Decimal(15, 2)
   accountId       String
   cashFlowGroup   String   @default("OPERATIONAL")
@@ -354,66 +290,47 @@ model Transaction {
   salesOrderId    String?
   purchaseOrderId String?
   description     String?
-
-  account Account @relation(fields: [accountId], references: [id])
+  account         Account  @relation(fields: [accountId], references: [id])
 
   @@index([accountId])
   @@index([date])
   @@index([type, cashFlowGroup, date])
 }
 
-// ===== CÔNG NỢ & THANH TOÁN =====
-enum InvoiceType {
-  AR // Accounts Receivable — phải thu khách
-  AP // Accounts Payable — phải trả NCC
-}
-
-enum InvoiceStatus {
-  OPEN
-  PARTIAL
-  PAID
-  CANCELLED
-}
-
-// Công nợ — NGUỒN SỰ THẬT. balanceDue = totalAmount - paidAmount, luôn >= 0.
-// Order.paymentStatus DERIVE từ Invoice (không set tay, không lưu song song).
 model Invoice {
-  id              String        @id @default(cuid())
-  invoiceNumber   String        @unique
+  id              String               @id @default(cuid())
+  invoiceNumber   String               @unique
   type            InvoiceType
-  status          InvoiceStatus @default(OPEN)
+  status          InvoiceStatus        @default(OPEN)
   customerId      String?
   supplierId      String?
-  salesOrderId    String?       @unique
-  purchaseOrderId String?       @unique
-  totalAmount     Decimal       @db.Decimal(15, 2)
-  paidAmount      Decimal       @default(0) @db.Decimal(15, 2)
-  balanceDue      Decimal       @db.Decimal(15, 2)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  payments       PaymentApplication[]
-  customer       Customer?       @relation(fields: [customerId], references: [id])
-  supplier       Supplier?       @relation(fields: [supplierId], references: [id])
-  salesOrder     SalesOrder?     @relation(fields: [salesOrderId], references: [id])
-  purchaseOrder  PurchaseOrder?  @relation(fields: [purchaseOrderId], references: [id])
+  salesOrderId    String?              @unique
+  purchaseOrderId String?              @unique
+  totalAmount     Decimal              @db.Decimal(15, 2)
+  paidAmount      Decimal              @default(0) @db.Decimal(15, 2)
+  balanceDue      Decimal              @db.Decimal(15, 2)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  customer        Customer?            @relation(fields: [customerId], references: [id])
+  purchaseOrder   PurchaseOrder?       @relation(fields: [purchaseOrderId], references: [id])
+  salesOrder      SalesOrder?          @relation(fields: [salesOrderId], references: [id])
+  supplier        Supplier?            @relation(fields: [supplierId], references: [id])
+  payments        PaymentApplication[]
 
   @@index([customerId])
   @@index([supplierId])
 }
 
-// Chiều thanh toán: IN = thu (AR), OUT = chi (AP).
 model Payment {
-  id          String   @id @default(cuid())
-  direction   String   // IN | OUT
-  amount      Decimal  @db.Decimal(15, 2)
-  accountId   String
-  customerId  String?
-  supplierId  String?
-  date        DateTime @default(now())
-  description String?
-  createdAt   DateTime @default(now())
-
+  id           String               @id @default(cuid())
+  direction    String
+  amount       Decimal              @db.Decimal(15, 2)
+  accountId    String
+  customerId   String?
+  supplierId   String?
+  date         DateTime             @default(now())
+  description  String?
+  createdAt    DateTime             @default(now())
   account      Account              @relation(fields: [accountId], references: [id])
   applications PaymentApplication[]
 
@@ -421,74 +338,61 @@ model Payment {
   @@index([date])
 }
 
-// Áp thanh toán vào nhiều hóa đơn (N-N).
 model PaymentApplication {
   id            String  @id @default(cuid())
   paymentId     String
   invoiceId     String
   appliedAmount Decimal @db.Decimal(15, 2)
-
-  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-  invoice Invoice @relation(fields: [invoiceId], references: [id])
+  invoice       Invoice @relation(fields: [invoiceId], references: [id])
+  payment       Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
   @@index([paymentId])
   @@index([invoiceId])
 }
 
-// ===== HOA HỒNG & NHÂN VIÊN =====
 model CommissionRule {
-  id            String  @id @default(cuid())
+  id            String   @id @default(cuid())
   name          String
-  type          String  // PERCENTAGE | FIXED_PER_ITEM
-  value         Decimal @db.Decimal(15, 2)
+  type          String
+  value         Decimal  @db.Decimal(15, 2)
   productId     String?
-  minOrderValue Decimal @default(0) @db.Decimal(15, 2)
-  isActive      Boolean @default(true)
+  minOrderValue Decimal  @default(0) @db.Decimal(15, 2)
+  isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
 }
 
-// Payout theo nhân viên + tháng. Idempotent: @@unique([userId, periodMonth, periodYear])
-// bắt P2002 nếu generate 2 lần. Hủy đơn sau payout phải trừ lại commission.
 model Payout {
-  id           String  @id @default(cuid())
-  userId       String
-  periodMonth  Int     // 1-12
-  periodYear   Int
-  commission   Decimal @db.Decimal(15, 2)
-  orderCount   Int     @default(0)
-  status       String  @default("PENDING") // PENDING | PAID
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id])
+  id          String   @id @default(cuid())
+  userId      String
+  periodMonth Int
+  periodYear  Int
+  commission  Decimal  @db.Decimal(15, 2)
+  orderCount  Int      @default(0)
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, periodMonth, periodYear])
 }
 
-// Tạm ứng / hoàn ứng / hoa hồng chi trả. Quỹ nhân viên = Σ ADVANCE - Σ REFUND.
 model EmployeeTransaction {
   id          String   @id @default(cuid())
   userId      String
-  type        String   // ADVANCE | REFUND | COMMISSION_PAYOUT
+  type        String
   amount      Decimal  @db.Decimal(15, 2)
   description String?
   createdAt   DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
 }
 
-// Thêm back-relation vào User
-// model User already exists — add below via separate edit
-
-// ===== HẠ TẦNG =====
-// Outbox pattern cho side-effect bất đồng bộ (FOR UPDATE SKIP LOCKED + backoff).
 model OutboxEvent {
   id             String    @id @default(cuid())
   type           String
   payload        Json
-  status         String    @default("PENDING") // PENDING | PROCESSING | DONE | DEAD
+  status         String    @default("PENDING")
   attempts       Int       @default(0)
   nextRetryAt    DateTime?
   lockedUntil    DateTime?
@@ -525,4 +429,39 @@ model TransactionCategory {
   parentId  String?
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
+}
+
+enum OrderStatus {
+  PENDING
+  DELIVERED
+  CANCELLED
+}
+
+enum PurchaseStatus {
+  ORDERED
+  RECEIVED
+  CANCELLED
+}
+
+enum FulfillmentType {
+  WAREHOUSE
+  DROPSHIP
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+}
+
+enum InvoiceType {
+  AR
+  AP
+}
+
+enum InvoiceStatus {
+  OPEN
+  PARTIAL
+  PAID
+  CANCELLED
 }
