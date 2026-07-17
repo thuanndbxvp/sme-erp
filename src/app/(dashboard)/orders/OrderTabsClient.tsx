@@ -83,6 +83,20 @@ export default function OrderTabsClient({ salesOrders, purchaseOrders, initialTa
     return "var(--color-warning)";
   };
 
+  const STATUS_MAP: Record<string, string> = {
+    PENDING: "Chờ xử lý",
+    ORDERED: "Đã đặt hàng",
+    DELIVERED: "Đã giao hàng",
+    RECEIVED: "Đã nhận hàng",
+    CANCELLED: "Đã hủy"
+  };
+
+  const PAYMENT_MAP: Record<string, string> = {
+    UNPAID: "Chưa thanh toán",
+    PARTIAL: "Một phần",
+    PAID: "Đã thanh toán"
+  };
+
   return (
     <div>
       {/* Action bar */}
@@ -144,10 +158,12 @@ export default function OrderTabsClient({ salesOrders, purchaseOrders, initialTa
                 <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right", fontWeight: 600, whiteSpace: "nowrap" }}>{Number(o.totalAmount).toLocaleString("vi-VN")} đ</td>
                 <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center" }}>
                   <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", fontWeight: 600, background: statusColor(o.status) + "20", color: statusColor(o.status) }}>
-                    {o.status}
+                    {STATUS_MAP[o.status] || o.status}
                   </span>
                 </td>
-                <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center", fontSize: "var(--text-xs)" }}>{o.paymentStatus}</td>
+                <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "center", fontSize: "var(--text-xs)", fontWeight: 500, color: o.paymentStatus === "PAID" ? "var(--color-success)" : o.paymentStatus === "PARTIAL" ? "var(--color-warning)" : "var(--color-foreground-muted)" }}>
+                  {PAYMENT_MAP[o.paymentStatus] || o.paymentStatus}
+                </td>
                 <td style={{ padding: "var(--space-3) var(--space-4)", textAlign: "right", fontSize: "var(--text-xs)", whiteSpace: "nowrap" }}>
                   {o.saleDate ? new Date(o.saleDate).toLocaleDateString("vi-VN") : o.orderDate ? new Date(o.orderDate).toLocaleDateString("vi-VN") : "—"}
                 </td>
