@@ -188,7 +188,6 @@ model SalesOrder {
   fulfillmentType       FulfillmentType  @default(WAREHOUSE)
   customerId            String
   warehouseId           String?
-  linkedPurchaseOrderId String?          @unique
   salespersonId         String?
   userId                String?
   saleDate              DateTime?
@@ -203,6 +202,7 @@ model SalesOrder {
   customer              Customer         @relation(fields: [customerId], references: [id])
   warehouse             Warehouse?       @relation(fields: [warehouseId], references: [id])
   items                 SalesOrderItem[]
+  linkedPurchaseOrders  PurchaseOrder[]  @relation("SalesOrderToPurchaseOrders")
 
   @@index([status])
   @@index([customerId, status])
@@ -228,22 +228,24 @@ model SalesOrderItem {
 }
 
 model PurchaseOrder {
-  id            String              @id @default(cuid())
-  orderCode     String              @unique
-  status        PurchaseStatus      @default(ORDERED)
-  paymentStatus PaymentStatus       @default(UNPAID)
-  supplierId    String
-  warehouseId   String?
-  userId        String?
-  orderDate     DateTime?
-  receivedDate  DateTime?
-  totalAmount   Decimal             @default(0) @db.Decimal(15, 2)
-  taxAmount     Decimal             @default(0) @db.Decimal(15, 2)
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-  invoice       Invoice?
-  supplier      Supplier            @relation(fields: [supplierId], references: [id])
-  items         PurchaseOrderItem[]
+  id                 String              @id @default(cuid())
+  orderCode          String              @unique
+  status             PurchaseStatus      @default(ORDERED)
+  paymentStatus      PaymentStatus       @default(UNPAID)
+  supplierId         String
+  warehouseId        String?
+  linkedSalesOrderId String?
+  userId             String?
+  orderDate          DateTime?
+  receivedDate       DateTime?
+  totalAmount        Decimal             @default(0) @db.Decimal(15, 2)
+  taxAmount          Decimal             @default(0) @db.Decimal(15, 2)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  invoice            Invoice?
+  supplier           Supplier            @relation(fields: [supplierId], references: [id])
+  linkedSalesOrder   SalesOrder?         @relation("SalesOrderToPurchaseOrders", fields: [linkedSalesOrderId], references: [id])
+  items              PurchaseOrderItem[]
 
   @@index([status])
   @@index([supplierId, status])

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Integration test OrderOrchestrator (P2-2, invariant C5) â€” DB THáº¬T (Neon).
  *
  * AC:
@@ -74,45 +74,45 @@ describeIf("OrderOrchestrator integration (C5)", () => {
     );
     expect(so.status).toBe("PENDING");
     expect(so.fulfillmentType).toBe("WAREHOUSE");
-    expect(so.linkedPurchaseOrderId).toBeNull();
     expect(so.totalAmount.toString()).toBe("20000");
   });
 
   it("DROPSHIP: táº¡o PO (ORDERED) + SO link Ä‘Ãºng, cÃ¹ng transaction", async () => {
-    const { salesOrder, purchaseOrder } = await OrderOrchestrator.createDropshipOrder(
+    const { salesOrder, purchaseOrders } = await OrderOrchestrator.createDropshipOrder(
       {
         customerId,
-        supplierId,
         commissionAmount: "0",
         items: [
           {
             productName: "SP-DS",
-            unit: "cÃ¡i",
+            unit: "cái",
             qty: 5,
             sellPrice: "12000",
             baseCost: "0",
             taxAmount: "0",
             buyPrice: "8000",
             purchaseTaxAmount: "0",
+            supplierId,
           },
         ],
       },
       { now: new Date(), random: nextRandom() },
       prisma,
     );
+    const purchaseOrder = purchaseOrders[0];
 
-    expect(purchaseOrder.status).toBe("ORDERED");
-    expect(purchaseOrder.totalAmount.toString()).toBe("40000"); // 5*8000
+    expect(purchaseOrder!.status).toBe("ORDERED");
+    expect(purchaseOrder!.totalAmount.toString()).toBe("40000"); // 5*8000
     expect(salesOrder.fulfillmentType).toBe("DROPSHIP");
-    expect(salesOrder.linkedPurchaseOrderId).toBe(purchaseOrder.id);
+    expect(purchaseOrder!.linkedSalesOrderId).toBe(salesOrder.id);
     expect(salesOrder.totalAmount.toString()).toBe("60000"); // 5*12000
 
     // Verify tá»« DB Ä‘á»™c láº­p: cáº£ 2 tá»“n táº¡i, link khá»›p
     const soDb = await prisma.salesOrder.findUniqueOrThrow({ where: { id: salesOrder.id } });
     const poDb = await prisma.purchaseOrder.findUniqueOrThrow({
-      where: { id: purchaseOrder.id },
+      where: { id: purchaseOrder!.id },
     });
-    expect(soDb.linkedPurchaseOrderId).toBe(poDb.id);
+    expect(poDb.linkedSalesOrderId).toBe(soDb.id);
   });
 
   it("ROLLBACK: DROPSHIP vá»›i customerId sai FK â†’ KHÃ”NG cÃ²n PO láº«n SO", async () => {
@@ -127,18 +127,18 @@ describeIf("OrderOrchestrator integration (C5)", () => {
       OrderOrchestrator.createDropshipOrder(
         {
           customerId: "khong-ton-tai-fk", // gÃ¢y lá»—i FK á»Ÿ bÆ°á»›c táº¡o SO (sau khi PO Ä‘Ã£ táº¡o)
-          supplierId,
           commissionAmount: "0",
           items: [
             {
               productName: "SP-FAIL",
-              unit: "cÃ¡i",
+              unit: "cái",
               qty: 1,
               sellPrice: "1000",
               baseCost: "0",
               taxAmount: "0",
               buyPrice: "500",
               purchaseTaxAmount: "0",
+              supplierId,
             },
           ],
         },

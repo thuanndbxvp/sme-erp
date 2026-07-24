@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Integration test SO/PO service + state machine (P2-1b, invariant C4) â€” DB THáº¬T.
  *
  * AC:
@@ -84,8 +84,9 @@ describeIf("SO/PO service + state machine integration (C4)", () => {
   it("create SO: tá»•ng tÃ­nh láº¡i server = 3*10000 + 2*5000 = 40000", async () => {
     const so = await makeSO();
     expect(so.totalAmount.toString()).toBe("40000");
-    expect(so.items).toHaveLength(2);
-    const item0 = so.items.find((i) => i.productName === "SP1");
+    const soData = await prisma.salesOrder.findUniqueOrThrow({ where: { id: so.id }, include: { items: true } });
+    expect(soData.items).toHaveLength(2);
+    const item0 = soData.items.find((i) => i.productName === "SP1");
     expect(item0?.sellTotal.toString()).toBe("30000");
     expect(so.status).toBe("PENDING");
 
@@ -157,7 +158,7 @@ describeIf("SO/PO service + state machine integration (C4)", () => {
     const po = await PurchaseOrderService.create(
       {
         supplierId,
-        items: [{ productName: "NL1", unit: "kg", qty: 10, buyPrice: "2000", taxAmount: "0" }],
+        items: [{ productName: "NL1", unit: "kg", qty: 10, buyPrice: "2000", taxAmount: "0", supplierId }],
       },
       { now: new Date(), random: nextRandom() },
       prisma,

@@ -38,7 +38,7 @@ export class SalesOrderService {
   static async createInTx(
     tx: TxClient,
     input: CreateSalesOrderInput,
-    meta: CreateSalesOrderMeta & { linkedPurchaseOrderId?: string } = {},
+    meta: CreateSalesOrderMeta = {},
   ) {
     const now = meta.now ?? new Date();
     const random = meta.random ?? 0.5;
@@ -71,7 +71,6 @@ export class SalesOrderService {
         fulfillmentType: input.fulfillmentType,
         customerId: input.customerId,
         warehouseId: input.warehouseId ?? null,
-        linkedPurchaseOrderId: meta.linkedPurchaseOrderId ?? null,
         salespersonId: input.salespersonId ?? null,
         userId: meta.userId ?? null,
         saleDate: input.saleDate ?? now,

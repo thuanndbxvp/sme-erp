@@ -3,13 +3,28 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 export default async function NewOrderPage() {
-  const [customers, suppliers, warehouses, products, accounts] = await Promise.all([
+  const [customers, suppliers, warehouses, products, purchaseHistory] = await Promise.all([
     prisma.customer.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
     prisma.supplier.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
     prisma.warehouse.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
     prisma.product.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
-    prisma.account.findMany({ where: { isActive: true }, orderBy: { code: "asc" } }),
+    prisma.purchaseOrderItem.findMany({
+      where: { productId: { not: null } },
+      select: { productId: true, purchaseOrder: { select: { supplierId: true } } },
+    }),
   ]);
+
+  const productSupplierMap: Record<string, string[]> = {};
+  for (const item of purchaseHistory) {
+    if (item.productId && item.purchaseOrder?.supplierId) {
+      if (!productSupplierMap[item.productId]) {
+        productSupplierMap[item.productId] = [];
+      }
+      if (!productSupplierMap[item.productId]!.includes(item.purchaseOrder.supplierId)) {
+        productSupplierMap[item.productId]!.push(item.purchaseOrder.supplierId);
+      }
+    }
+  }
 
   return (
     <div>
@@ -19,7 +34,7 @@ export default async function NewOrderPage() {
         suppliers={JSON.parse(JSON.stringify(suppliers))}
         warehouses={JSON.parse(JSON.stringify(warehouses))}
         products={JSON.parse(JSON.stringify(products))}
-        accounts={JSON.parse(JSON.stringify(accounts))}
+        productSupplierMap={productSupplierMap}
       />
     </div>
   );

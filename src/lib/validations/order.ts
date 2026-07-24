@@ -49,10 +49,10 @@ export const purchaseOrderItemInput = z.object({
   qty: qtySchema,
   buyPrice: moneySchema,
   taxAmount: moneySchema.default("0"),
+  supplierId: nonEmptyString,
 });
 
 export const createPurchaseOrderSchema = z.object({
-  supplierId: nonEmptyString,
   warehouseId: z.string().min(1).optional(),
   orderDate: z.coerce.date().optional(),
   note: optionalSafeString, // XSS-safe
@@ -70,11 +70,11 @@ export type CreatePurchaseOrderInput = z.infer<typeof createPurchaseOrderSchema>
 export const dropshipItemInput = salesOrderItemInput.extend({
   buyPrice: moneySchema, // giá nhập NCC cho dòng này (tạo PO)
   purchaseTaxAmount: moneySchema.default("0"),
+  supplierId: nonEmptyString,
 });
 
 export const createDropshipOrderSchema = z.object({
   customerId: nonEmptyString,
-  supplierId: nonEmptyString,
   salespersonId: z.string().min(1).optional(),
   saleDate: z.coerce.date().optional(),
   note: optionalSafeString, // XSS-safe

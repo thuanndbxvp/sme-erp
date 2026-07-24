@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Integration test P2-3 (giao hÃ ng) + P2-4 (há»§y Ä‘Æ¡n) â€” DB THáº¬T (Neon).
  *
  * AC P2-3: tá»“n giáº£m Ä‘Ãºng khi giao WAREHOUSE; idempotent khi retry.
@@ -190,30 +190,30 @@ describeIf("P2-4: Há»§y Ä‘Æ¡n â€” hoÃ n kho", () => {
   it("Há»§y PO Ä‘Ã£ RECEIVED â†’ CANCELLED + hoÃ n kho (RETURN_OUT)", async () => {
     const po = await OrderOrchestrator.createDropshipOrder(
       {
-        customerId, supplierId,
+        customerId,
         commissionAmount: "0",
-        items: [{ productId: product1Id, productName: "SP1", unit: "cÃ¡i", qty: 4, sellPrice: "3000", buyPrice: "2000", baseCost: "0", taxAmount: "0", purchaseTaxAmount: "0" }],
+        items: [{ productId: product1Id, productName: "SP1", unit: "cái", qty: 4, sellPrice: "3000", buyPrice: "2000", baseCost: "0", taxAmount: "0", purchaseTaxAmount: "0", supplierId }],
       },
       { now: new Date(), random: nextRandom() }, prisma,
-    ).then(r => r.purchaseOrder);
+    ).then(r => r.purchaseOrders[0]);
 
     // Set warehouseId + nháº­n hÃ ng
-    await prisma.purchaseOrder.update({ where: { id: po.id }, data: { warehouseId } });
-    await OrderOrchestrator.receivePurchaseOrder(po.id, {}, prisma);
+    await prisma.purchaseOrder.update({ where: { id: po!.id }, data: { warehouseId } });
+    await OrderOrchestrator.receivePurchaseOrder(po!.id, {}, prisma);
     const afterRecv = await getQty(product1Id); // 50 + 4 = 54
     expect(afterRecv).toBe(54);
 
-    await OrderOrchestrator.cancelPurchaseOrder(po.id, {}, prisma);
+    await OrderOrchestrator.cancelPurchaseOrder(po!.id, {}, prisma);
     // HoÃ n kho: 54 - 4 = 50
     expect(await getQty(product1Id)).toBe(50);
   });
 
   it("Há»§y SO DROPSHIP â†’ Ä‘á»“ng bá»™ há»§y cáº£ PO (C5: khÃ´ng PO treo)", async () => {
-    const { salesOrder, purchaseOrder } = await OrderOrchestrator.createDropshipOrder(
+    const { salesOrder, purchaseOrders } = await OrderOrchestrator.createDropshipOrder(
       {
-        customerId, supplierId,
+        customerId,
         commissionAmount: "0",
-        items: [{ productId: product1Id, productName: "SP-DS", unit: "cÃ¡i", qty: 3, sellPrice: "5000", buyPrice: "3000", baseCost: "0", taxAmount: "0", purchaseTaxAmount: "0" }],
+        items: [{ productId: product1Id, productName: "SP-DS", unit: "cái", qty: 3, sellPrice: "5000", buyPrice: "3000", baseCost: "0", taxAmount: "0", purchaseTaxAmount: "0", supplierId }],
       },
       { now: new Date(), random: nextRandom() }, prisma,
     );
@@ -224,7 +224,7 @@ describeIf("P2-4: Há»§y Ä‘Æ¡n â€” hoÃ n kho", () => {
     await OrderOrchestrator.cancelSalesOrder(salesOrder.id, {}, prisma);
 
     const so = await prisma.salesOrder.findUniqueOrThrow({ where: { id: salesOrder.id } });
-    const po = await prisma.purchaseOrder.findUniqueOrThrow({ where: { id: purchaseOrder.id } });
+    const po = await prisma.purchaseOrder.findUniqueOrThrow({ where: { id: purchaseOrders[0]!.id } });
     expect(so.status).toBe("CANCELLED");
     expect(po.status).toBe("CANCELLED"); // C5: khÃ´ng PO treo
   });

@@ -22,22 +22,6 @@ function QuickAddCustomer({ onDone, onCancel }: { onDone: (c: any) => void; onCa
   );
 }
 
-function QuickAddSupplier({ onDone, onCancel }: { onDone: (s: any) => void; onCancel: () => void }) {
-  const [name, setName] = useState("");
-  async function submit() {
-    const r = await fetch("/api/quick-add", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "supplier", name }) });
-    const data = await r.json();
-    if (data.id) onDone(data);
-  }
-  return (
-    <div style={{ display: "flex", gap: 6, alignItems: "center", padding: 4 }}>
-      <input placeholder="Tên NCC" value={name} onChange={e => setName(e.target.value)} style={{ ...quickS, width: 180 }} />
-      <button onClick={submit} style={quickBtn}>Lưu</button>
-      <button onClick={onCancel} style={{ ...quickBtn, background: "#eee", color: "#333" }}>✕</button>
-    </div>
-  );
-}
-
 function QuickAddProduct({ onDone, onCancel }: { onDone: (p: any) => void; onCancel: () => void }) {
   const [name, setName] = useState(""); const [unit, setUnit] = useState("cái");
   async function submit() {
@@ -65,23 +49,21 @@ const btnSec: React.CSSProperties = { ...btn, background: "var(--color-surface)"
 
 function fmtVND(v: any): string { const n = Number(String(v).replace(/\D/g, "")); return n ? n.toLocaleString("vi-VN") : ""; }
 
-interface ItemRow { id: string; productName: string; unit: string; qty: number; buyPrice: string; sellPrice: string; baseCost: string; purchaseTaxRate: string; taxRate: string }
+interface ItemRow { id: string; productName: string; unit: string; qty: number; buyPrice: string; sellPrice: string; baseCost: string; purchaseTaxRate: string; taxRate: string; supplierId: string }
 
-export default function UnifiedOrderForm({ customers: initCust, suppliers: initSupp, warehouses, products: initProd, accounts }: { customers: any[]; suppliers: any[]; warehouses: any[]; products: any[]; accounts?: any[] }) {
+export default function UnifiedOrderForm({ customers: initCust, suppliers: initSupp, warehouses, products: initProd, productSupplierMap = {} }: { customers: any[]; suppliers: any[]; warehouses: any[]; products: any[]; productSupplierMap?: Record<string, string[]> }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   const [customers, setCustomers] = useState(initCust);
-  const [suppliers, setSuppliers] = useState(initSupp);
+  const [suppliers] = useState(initSupp);
   const [products, setProducts] = useState(initProd);
   const [addCust, setAddCust] = useState(false);
-  const [addSupp, setAddSupp] = useState(false);
   const [addProd, setAddProd] = useState(false);
 
-  const [mode, setMode] = useState<"DROPSHIP" | "WAREHOUSE" | "IMPORT">("DROPSHIP");
+  const [mode, setMode] = useState<"DROPSHIP" | "WAREHOUSE" | "IMPORT">("IMPORT");
   const [customerId, setCustomerId] = useState(customers[0]?.id ?? "");
-  const [supplierId, setSupplierId] = useState(suppliers[0]?.id ?? "");
   const [warehouseId, setWarehouseId] = useState(warehouses[0]?.id ?? "");
   const today = new Date().toISOString();
   const [saleDate, setSaleDate] = useState(today.substring(0, today.indexOf("T")));
@@ -94,22 +76,14 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
   const [commissionAmount, setCommissionAmount] = useState("0"); // MSEW-payroll-hr: hoa hồng cố định
   const [notes, setNotes] = useState("");
 
-  // Purchase payment (DROPSHIP/IMPORT)
-  const [purchaseStatus, setPurchaseStatus] = useState("PENDING");
-  const [purchasePaidAmount, setPurchasePaidAmount] = useState("");
-  const [purchaseAccountId, setPurchaseAccountId] = useState(accounts?.[0]?.id ?? "");
-  // Sale payment (DROPSHIP/WAREHOUSE)
-  const [saleStatus, setSaleStatus] = useState("PENDING");
-  const [salePaidAmount, setSalePaidAmount] = useState("");
-  const [saleAccountId, setSaleAccountId] = useState(accounts?.[0]?.id ?? "");
 
   // Global tax rates
   const [purchaseTaxRate, setPurchaseTaxRate] = useState("");
   const [saleTaxRate, setSaleTaxRate] = useState("");
 
-  const [items, setItems] = useState<ItemRow[]>([{ id: "1", productName: "", unit: "cái", qty: 1, buyPrice: "", sellPrice: "", baseCost: "", purchaseTaxRate: "", taxRate: "" }]);
+  const [items, setItems] = useState<ItemRow[]>([{ id: "1", productName: "", unit: "cái", qty: 1, buyPrice: "", sellPrice: "", baseCost: "", purchaseTaxRate: "", taxRate: "", supplierId: suppliers[0]?.id ?? "" }]);
 
-  function addItem() { setItems([...items, { id: String(Date.now()), productName: "", unit: "cái", qty: 1, buyPrice: "", sellPrice: "", baseCost: "", purchaseTaxRate: "", taxRate: "" }]); }
+  function addItem() { setItems([...items, { id: String(Date.now()), productName: "", unit: "cái", qty: 1, buyPrice: "", sellPrice: "", baseCost: "", purchaseTaxRate: "", taxRate: "", supplierId: suppliers[0]?.id ?? "" }]); }
   function removeItem(id: string) { if (items.length > 1) setItems(items.filter(it => it.id !== id)); }
   function updateItem(id: string, f: string, v: any) { setItems(prev => prev.map(it => it.id === id ? { ...it, [f]: v } : it)); }
   function handleProductSelect(id: string, name: string) {
@@ -131,14 +105,12 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
   }, 0);
   const totalQty = items.reduce((s, it) => s + (Number(it.qty) || 0), 0);
 
-  function applyPayNCCNow() { setPurchaseStatus("PAID"); setPurchasePaidAmount(String(totalBuy)); }
-  function applyPayKHNow() { setSaleStatus("PAID"); setSalePaidAmount(String(totalSell)); }
+
 
   async function onSubmit() {
     setError(null);
     try {
-      const purchasePayment = purchaseStatus !== "PENDING" && Number(purchasePaidAmount) > 0 ? { paidAmount: String(Number(String(purchasePaidAmount).replace(/\D/g, "")) || 0), accountId: purchaseAccountId } : null;
-      const salePayment = saleStatus !== "PENDING" && Number(salePaidAmount) > 0 ? { paidAmount: String(Number(String(salePaidAmount).replace(/\D/g, "")) || 0), accountId: saleAccountId } : null;
+      if (items.some(it => showBuyCol && !it.supplierId)) throw new Error("Vui lòng chọn Nhà cung cấp cho tất cả sản phẩm Mua.");
 
       const normalizedItems = items.map(it => ({
         productId: products.find((p: any) => p.name === it.productName)?.id || undefined,
@@ -149,11 +121,11 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
         baseCost: String(Number(String(it.baseCost).replace(/\D/g, "")) || Number(String(it.buyPrice).replace(/\D/g, "")) || 0),
         taxAmount: "0", taxRate: Number(it.taxRate) || 0,
         purchaseTaxRate: Number(it.purchaseTaxRate) || 0,
+        supplierId: it.supplierId,
       }));
 
       const fd = new FormData();
       fd.set("customerId", customerId);
-      fd.set("supplierId", supplierId);
       fd.set("warehouseId", warehouseId);
       fd.set("saleDate", saleDate);
       fd.set("salespersonId", salespersonId);
@@ -166,8 +138,7 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
       fd.set("commissionAmount", String(Number(String(commissionAmount).replace(/\D/g, "")) || 0));
       fd.set("saleTaxRate", saleTaxRate);
       fd.set("purchaseTaxRate", purchaseTaxRate);
-      if (purchasePayment) { fd.set("purchasePaidAmount", purchasePayment.paidAmount); fd.set("purchaseAccountId", purchasePayment.accountId); }
-      if (salePayment) { fd.set("salePaidAmount", salePayment.paidAmount); fd.set("saleAccountId", salePayment.accountId); }
+
 
       const { createUnifiedOrder } = await import("@/app/actions/order-actions");
       startTransition(async () => {
@@ -178,7 +149,7 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
     } catch (e: any) { setError(e.message); }
   }
 
-  const showBuyCol = mode === "DROPSHIP";
+  const showBuyCol = mode === "DROPSHIP" || mode === "IMPORT";
   const showSellCol = mode === "DROPSHIP" || mode === "WAREHOUSE";
   const showBuySection = mode === "DROPSHIP" || mode === "IMPORT";
   const showSellSection = mode === "DROPSHIP" || mode === "WAREHOUSE";
@@ -189,9 +160,9 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
 
       {/* Mode + Status */}
       <div style={{ display: "flex", gap: "var(--space-2)", marginBottom: "var(--space-5)", flexWrap: "wrap", alignItems: "end" }}>
-        <ModeBtn active={mode === "DROPSHIP"} onClick={() => setMode("DROPSHIP")} color="#D97706" label="🔄 Dropship (Mua + Bán)" />
-        <ModeBtn active={mode === "WAREHOUSE"} onClick={() => setMode("WAREHOUSE")} color="#2563EB" label="📦 Bán từ kho" />
         <ModeBtn active={mode === "IMPORT"} onClick={() => setMode("IMPORT")} color="#16A34A" label="🏗 Nhập kho (Mua hàng)" />
+        <ModeBtn active={mode === "WAREHOUSE"} onClick={() => setMode("WAREHOUSE")} color="#2563EB" label="📦 Bán từ kho" />
+        <ModeBtn active={mode === "DROPSHIP"} onClick={() => setMode("DROPSHIP")} color="#D97706" label="🔄 Dropship (Mua + Bán)" />
       </div>
 
       {/* 2-Column Layout for Dropship */}
@@ -203,19 +174,7 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
             <h3 style={{ fontSize: "var(--text-base)", fontWeight: 700, color: "#C2410C", marginBottom: "var(--space-4)", borderBottom: "1px solid #FDBA74", paddingBottom: "var(--space-2)" }}>
               🛒 Thông tin Mua hàng (Đầu vào)
             </h3>
-
-            {/* Supplier */}
-            <div style={{ marginBottom: "var(--space-3)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
-                <label style={{ fontSize: "var(--text-xs)", fontWeight: 600 }}>Nhà cung cấp *</label>
-                {!addSupp && <button onClick={() => setAddSupp(true)} style={{ fontSize: "var(--text-xs)", color: "#C2410C", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>+ Thêm nhanh</button>}
-              </div>
-              {addSupp ? <QuickAddSupplier onDone={s => { setSuppliers([...suppliers, s]); setSupplierId(s.id); setAddSupp(false); }} onCancel={() => setAddSupp(false)} /> :
-                <select value={supplierId} onChange={e => setSupplierId(e.target.value)} style={S}>
-                  <option value="">-- Chọn NCC --</option>
-                  {suppliers.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>}
-            </div>
+            {/* Removed Supplier dropdown */}
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)", marginBottom: "var(--space-3)" }}>
               <div><label style={labelS}>Ngày đặt hàng</label><input type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)} style={S} /></div>
@@ -227,8 +186,6 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
               <input type="number" min="0" step="0.1" placeholder="VD: 8" value={purchaseTaxRate} onChange={e => { setPurchaseTaxRate(e.target.value); setItems(items.map(it => ({ ...it, purchaseTaxRate: e.target.value }))); }} style={S} />
             </div>
 
-            {/* Purchase Payment */}
-            <PaymentSection label="Thanh toán (Mua)" status={purchaseStatus} setStatus={setPurchaseStatus} paidAmount={purchasePaidAmount} setPaidAmount={setPurchasePaidAmount} accountId={purchaseAccountId} setAccountId={setPurchaseAccountId} accounts={accounts || []} total={totalBuy} onPayNow={applyPayNCCNow} color="#C2410C" />
           </div>
         )}
 
@@ -278,8 +235,6 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
               <input type="number" min="0" step="0.1" placeholder="VD: 8" value={saleTaxRate} onChange={e => { setSaleTaxRate(e.target.value); setItems(items.map(it => ({ ...it, taxRate: e.target.value }))); }} style={S} />
             </div>
 
-            {/* Sale Payment */}
-            <PaymentSection label="Thanh toán (Bán)" status={saleStatus} setStatus={setSaleStatus} paidAmount={salePaidAmount} setPaidAmount={setSalePaidAmount} accountId={saleAccountId} setAccountId={setSaleAccountId} accounts={accounts || []} total={totalSell} onPayNow={applyPayKHNow} color="#1D4ED8" />
           </div>
         )}
       </div>
@@ -302,6 +257,7 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)", minWidth: 750 }}>
             <thead><tr style={{ borderBottom: "1px solid var(--color-border)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--color-foreground-muted)", textTransform: "uppercase", letterSpacing: "0.05em", background: "#F8FAFC" }}>
               <th style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center", width: 50 }}>STT</th>
+              {showBuyCol && <th style={{ padding: "var(--space-2) var(--space-3)", textAlign: "left", width: 140, color: "#C2410C" }}>Nhà cung cấp</th>}
               <th style={{ padding: "var(--space-2) var(--space-3)", textAlign: "left", minWidth: 150 }}>Sản phẩm</th>
               <th style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center", width: 60 }}>SL</th>
               <th style={{ padding: "var(--space-2) var(--space-3)", textAlign: "left", width: 70 }}>ĐVT</th>
@@ -314,9 +270,33 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
               {items.map((it, index) => (
                 <tr key={it.id} style={{ borderBottom: "1px solid var(--color-muted)" }}>
                   <td style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center" }}>{index + 1}</td>
+                  {showBuyCol && <td style={{ padding: "var(--space-2) var(--space-3)" }}>
+                    <select value={it.supplierId} onChange={e => updateItem(it.id, "supplierId", e.target.value)} style={{ ...S, border: "none", background: "transparent", width: "100%", padding: 0, color: "#C2410C" }}>
+                      <option value="">-- Chọn NCC --</option>
+                      {(() => {
+                        const prod = products.find((p: any) => p.name === it.productName);
+                        const histSuppliers: string[] = (prod && productSupplierMap[prod.id]) ? productSupplierMap[prod.id]! : [];
+                        if (histSuppliers.length > 0) {
+                          return (
+                            <>
+                              <optgroup label="NCC Từng giao dịch">
+                                {suppliers.filter((s: any) => histSuppliers.includes(s.id)).map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                              </optgroup>
+                              <optgroup label="NCC Khác">
+                                {suppliers.filter((s: any) => !histSuppliers.includes(s.id)).map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                              </optgroup>
+                            </>
+                          );
+                        }
+                        return suppliers.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>);
+                      })()}
+                    </select>
+                  </td>}
                   <td style={{ padding: "var(--space-2) var(--space-3)" }}>
-                    <input value={it.productName} onChange={e => handleProductSelect(it.id, e.target.value)} placeholder="Chọn hoặc nhập tên..." list="products" style={{ ...S, border: "none", background: "transparent", width: "100%" }} />
-                    <datalist id="products">{products.map((p: any) => <option key={p.id} value={p.name} />)}</datalist>
+                    <input value={it.productName} onChange={e => handleProductSelect(it.id, e.target.value)} placeholder="Chọn hoặc nhập tên..." list={`products-${index}`} style={{ ...S, border: "none", background: "transparent", width: "100%" }} />
+                    <datalist id={`products-${index}`}>
+                      {(it.supplierId ? products.filter((p: any) => productSupplierMap[p.id]?.includes(it.supplierId)) : products).map((p: any) => <option key={p.id} value={p.name} />)}
+                    </datalist>
                   </td>
                   <td style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center" }}><input type="number" value={it.qty} onChange={e => updateItem(it.id, "qty", e.target.value)} min={1} style={{ ...S, border: "none", background: "transparent", width: 55, textAlign: "center" }} /></td>
                   <td style={{ padding: "var(--space-2) var(--space-3)" }}><input value={it.unit} onChange={e => updateItem(it.id, "unit", e.target.value)} style={{ ...S, border: "none", background: "transparent", width: 60 }} /></td>
@@ -373,56 +353,4 @@ function ErrorBox({ error }: { error: string }) {
   return <div style={{ padding: "var(--space-3) var(--space-4)", background: "var(--color-destructive-bg)", color: "var(--color-destructive)", borderRadius: "var(--radius-md)", fontSize: "var(--text-sm)", marginBottom: "var(--space-4)", border: "1px solid var(--color-destructive)" }}>{error}</div>;
 }
 
-function PaymentSection({ label, status, setStatus, paidAmount, setPaidAmount, accountId, setAccountId, accounts, total, onPayNow, color }: any) {
-  const debt = Math.max(0, total - (Number(String(paidAmount).replace(/\D/g, "")) || 0));
-  return (
-    <div style={{ marginTop: "var(--space-3)" }}>
-      <label style={labelS}>{label}</label>
-      <div style={{ display: "flex", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
-        <select value={status} onChange={e => { setStatus(e.target.value); if (e.target.value === "PAID") { setPaidAmount(String(total)); } else if (e.target.value === "PENDING") { setPaidAmount(""); } }} style={S}>
-          <option value="PENDING">Chưa thanh toán</option>
-          <option value="PARTIAL">Trả một phần</option>
-          <option value="PAID">Đã thanh toán đủ</option>
-        </select>
-        <button type="button" onClick={onPayNow} title="Điền nhanh: thanh toán đủ ngay" style={{ ...quickBtn, background: color, whiteSpace: "nowrap" }}>⚡ Ngay</button>
-      </div>
 
-      {status === "PENDING" && (
-        <div style={{ padding: "var(--space-2) var(--space-3)", background: "#F1F5F9", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "#64748B" }}>
-          Còn nợ: <strong>{total.toLocaleString("vi-VN")} đ</strong>
-        </div>
-      )}
-
-      {status === "PAID" && (
-        <div style={{ padding: "var(--space-2) var(--space-3)", background: "#ECFDF5", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "#166534", fontWeight: 600 }}>
-          Đã trả đủ: {total.toLocaleString("vi-VN")} đ
-        </div>
-      )}
-
-      {status === "PARTIAL" && (
-        <div style={{ display: "grid", gap: "var(--space-2)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-2)" }}>
-            <div>
-              <label style={{ fontSize: "var(--text-xs)", fontWeight: 500 }}>Số tiền đã trả *</label>
-              <input value={fmtVND(paidAmount)} onChange={e => setPaidAmount(e.target.value.replace(/\D/g, ""))} placeholder="VD: 5,000,000" style={S} />
-            </div>
-            <div>
-              <label style={{ fontSize: "var(--text-xs)", fontWeight: 500 }}>Còn nợ</label>
-              <input value={fmtVND(String(debt))} onChange={e => { const newDebt = Number(e.target.value.replace(/\D/g, "")); setPaidAmount(String(Math.max(0, total - newDebt))); }} placeholder="Nhập số nợ..." style={S} />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {status !== "PENDING" && (
-        <div style={{ marginTop: "var(--space-2)" }}>
-          <label style={{ fontSize: "var(--text-xs)", fontWeight: 500, marginBottom: 2, display: "block" }}>Tài khoản *</label>
-          <select value={accountId} onChange={e => setAccountId(e.target.value)} style={S}>
-            <option value="">-- Chọn tài khoản --</option>
-            {accounts.map((a: any) => <option key={a.id} value={a.id}>{a.name} ({Number(a.balance).toLocaleString("vi-VN")} đ)</option>)}
-          </select>
-        </div>
-      )}
-    </div>
-  );
-}

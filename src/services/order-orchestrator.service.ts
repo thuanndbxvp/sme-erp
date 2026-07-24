@@ -96,23 +96,35 @@ export class OrderOrchestrator {
     const now = meta.now ?? new Date();
     const random = meta.random ?? 0.5;
     return prisma.$transaction(async (tx) => {
-      const purchaseOrder = await PurchaseOrderService.createInTx(tx, {
-        supplierId: input.supplierId,
-        items: input.items.map((it) => ({ productId: it.productId, productName: it.productName, unit: it.unit, qty: it.qty, buyPrice: (it as { buyPrice?: string }).buyPrice || "0", taxAmount: (it as { purchaseTaxAmount?: string }).purchaseTaxAmount ?? "0" })),
-        orderDate: input.saleDate,
-      }, { userId: meta.userId, now, random });
+      // Group items by supplierId
+      const itemsBySupplier = new Map<string, typeof input.items>();
+      for (const it of input.items) {
+        if (!itemsBySupplier.has(it.supplierId)) itemsBySupplier.set(it.supplierId, []);
+        itemsBySupplier.get(it.supplierId)!.push(it);
+      }
 
       const salesOrder = await SalesOrderService.createInTx(tx, {
         customerId: input.customerId, fulfillmentType: FULFILLMENT_TYPE.DROPSHIP,
         salespersonId: input.salespersonId, saleDate: input.saleDate,
         commissionAmount: input.commissionAmount ?? "0",
         items: input.items.map((it) => ({ productId: it.productId, productName: it.productName, unit: it.unit, qty: it.qty, sellPrice: it.sellPrice, baseCost: it.baseCost, taxAmount: it.taxAmount })),
-      }, { userId: meta.userId, now, random: (random + 0.001) % 1, linkedPurchaseOrderId: purchaseOrder.id });
+      }, { userId: meta.userId, now, random: (random + 0.001) % 1 });
 
-      await OrderBillingService.createPurchaseInvoice(tx, { id: purchaseOrder.id, supplierId: purchaseOrder.supplierId, totalAmount: purchaseOrder.totalAmount.toString() }, meta);
+      const purchaseOrders = [];
+      for (const [supplierId, supplierItems] of itemsBySupplier.entries()) {
+        const po = await PurchaseOrderService.createInTx(tx, {
+          supplierId,
+          items: supplierItems.map((it) => ({ productId: it.productId, productName: it.productName, unit: it.unit, qty: it.qty, buyPrice: (it as { buyPrice?: string }).buyPrice || "0", taxAmount: (it as { purchaseTaxAmount?: string }).purchaseTaxAmount ?? "0", supplierId })),
+          orderDate: input.saleDate,
+          linkedSalesOrderId: salesOrder.id,
+        }, { userId: meta.userId, now, random });
+        purchaseOrders.push(po);
+        await OrderBillingService.createPurchaseInvoice(tx, { id: po.id, supplierId: po.supplierId, totalAmount: po.totalAmount.toString() }, meta);
+      }
+
       await OrderBillingService.createSalesInvoice(tx, { id: salesOrder.id, customerId: salesOrder.customerId, totalAmount: salesOrder.totalAmount.toString() }, meta);
 
-      return { salesOrder, purchaseOrder };
+      return { salesOrder, purchaseOrders };
     }, { maxWait: 15_000, timeout: 30_000 });
   }
 
@@ -125,8 +137,8 @@ export class OrderOrchestrator {
   ) {
     return prisma.$transaction(async (tx) => {
       const locked = await tx.$queryRaw<
-        Array<{ id: string; status: string; fulfillmentType: string; warehouseId: string | null; linkedPurchaseOrderId: string | null }>
-      >`SELECT "id","status","fulfillmentType","warehouseId","linkedPurchaseOrderId" FROM "SalesOrder" WHERE "id"=${salesOrderId} FOR UPDATE`;
+        Array<{ id: string; status: string; fulfillmentType: string; warehouseId: string | null }>
+      >`SELECT "id","status","fulfillmentType","warehouseId" FROM "SalesOrder" WHERE "id"=${salesOrderId} FOR UPDATE`;
       const row = locked[0];
       if (!row) throw new NotFoundError("Đơn bán", salesOrderId);
 
@@ -137,8 +149,11 @@ export class OrderOrchestrator {
       await SalesOrderService.updateStatus(tx, salesOrderId, "DELIVERED", { userId: meta.userId, note: "Giao hàng" });
       await OrderFulfillmentService.shipItems(tx, salesOrderId, { userId: meta.userId });
 
-      if (row.fulfillmentType === "DROPSHIP" && row.linkedPurchaseOrderId) {
-        await receivePurchaseOrderInternal(tx, row.linkedPurchaseOrderId, { userId: meta.userId });
+      if (row.fulfillmentType === "DROPSHIP") {
+        const linkedPOs = await tx.purchaseOrder.findMany({ where: { linkedSalesOrderId: salesOrderId, status: { not: "RECEIVED" } } });
+        for (const po of linkedPOs) {
+          await receivePurchaseOrderInternal(tx, po.id, { userId: meta.userId });
+        }
       }
 
       return tx.salesOrder.findUniqueOrThrow({ where: { id: salesOrderId }, include: { items: true } });
@@ -520,8 +535,8 @@ async function cancelSalesOrderInternal(
   meta: OrchestratorMeta,
 ) {
   const locked = await tx.$queryRaw<
-    Array<{ id: string; status: string; fulfillmentType: string; warehouseId: string | null; linkedPurchaseOrderId: string | null }>
-  >`SELECT "id","status","fulfillmentType","warehouseId","linkedPurchaseOrderId" FROM "SalesOrder" WHERE "id"=${salesOrderId} FOR UPDATE`;
+    Array<{ id: string; status: string; fulfillmentType: string; warehouseId: string | null }>
+  >`SELECT "id","status","fulfillmentType","warehouseId" FROM "SalesOrder" WHERE "id"=${salesOrderId} FOR UPDATE`;
   const row = locked[0];
   if (!row) throw new NotFoundError("Đơn bán", salesOrderId);
 
@@ -541,8 +556,11 @@ async function cancelSalesOrderInternal(
   await tx.salesOrder.update({ where: { id: salesOrderId }, data: { status: "CANCELLED", deliveredDate: null } });
   await tx.orderStatusHistory.create({ data: { referenceType: REFERENCE_TYPE.SALES_ORDER, referenceId: salesOrderId, fromStatus: oldStatus, toStatus: "CANCELLED", userId: meta.userId ?? null, note: meta.note ?? "Hủy đơn" } });
 
-  if (!meta.skipLinkedPurchaseOrder && row.fulfillmentType === "DROPSHIP" && row.linkedPurchaseOrderId) {
-    await cancelPurchaseOrderInternal(tx, row.linkedPurchaseOrderId, { ...meta, skipLinkedSalesOrder: true });
+  if (!meta.skipLinkedPurchaseOrder && row.fulfillmentType === "DROPSHIP") {
+    const linkedPOs = await tx.purchaseOrder.findMany({ where: { linkedSalesOrderId: salesOrderId, status: { not: "CANCELLED" } } });
+    for (const po of linkedPOs) {
+      await cancelPurchaseOrderInternal(tx, po.id, { ...meta, skipLinkedSalesOrder: true });
+    }
   }
 
   return tx.salesOrder.findUniqueOrThrow({ where: { id: salesOrderId }, include: { items: true } });
@@ -554,8 +572,8 @@ async function cancelPurchaseOrderInternal(
   meta: OrchestratorMeta,
 ) {
   const locked = await tx.$queryRaw<
-    Array<{ id: string; status: string; warehouseId: string | null }>
-  >`SELECT "id","status","warehouseId" FROM "PurchaseOrder" WHERE "id"=${purchaseOrderId} FOR UPDATE`;
+    Array<{ id: string; status: string; warehouseId: string | null; linkedSalesOrderId: string | null }>
+  >`SELECT "id","status","warehouseId","linkedSalesOrderId" FROM "PurchaseOrder" WHERE "id"=${purchaseOrderId} FOR UPDATE`;
   const row = locked[0];
   if (!row) throw new NotFoundError("Đơn mua", purchaseOrderId);
 
@@ -575,11 +593,9 @@ async function cancelPurchaseOrderInternal(
   await tx.purchaseOrder.update({ where: { id: purchaseOrderId }, data: { status: "CANCELLED", receivedDate: null } });
   await tx.orderStatusHistory.create({ data: { referenceType: REFERENCE_TYPE.PURCHASE_ORDER, referenceId: purchaseOrderId, fromStatus: oldStatus, toStatus: "CANCELLED", userId: meta.userId ?? null, note: meta.note ?? "Hủy đơn" } });
 
-  if (!meta.skipLinkedSalesOrder) {
-    const linkedSalesOrders = await tx.salesOrder.findMany({
-      where: { linkedPurchaseOrderId: purchaseOrderId, status: { not: "CANCELLED" } }
-    });
-    for (const so of linkedSalesOrders) {
+  if (!meta.skipLinkedSalesOrder && row.linkedSalesOrderId) {
+    const so = await tx.salesOrder.findUnique({ where: { id: row.linkedSalesOrderId } });
+    if (so && so.status !== "CANCELLED") {
       await cancelSalesOrderInternal(tx, so.id, { ...meta, skipLinkedPurchaseOrder: true });
     }
   }

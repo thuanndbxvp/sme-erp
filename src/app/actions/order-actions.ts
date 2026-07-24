@@ -9,19 +9,8 @@ import { TransactionService } from "@/services/transaction.service";
 import { prisma } from "@/lib/prisma";
 import { safeAction } from "@/lib/action-result";
 import type { CreateSalesOrderInput, CreateDropshipOrderInput } from "@/lib/validations/order";
-import { FULFILLMENT_TYPE, PAYMENT_DIRECTION } from "@/domain/constants";
+import { FULFILLMENT_TYPE } from "@/domain/constants";
 import { revalidatePath } from "next/cache";
-
-/** Parse payment info from FormData if present */
-function parsePayment(data: FormData, prefix: string) {
-  const amount = data.get(`${prefix}PaidAmount`) as string;
-  if (!amount || Number(amount) <= 0) return null;
-  return {
-    paidAmount: amount,
-    accountId: data.get(`${prefix}AccountId`) as string,
-    categoryId: (data.get(`${prefix}CategoryId`) as string) || null,
-  };
-}
 
 export async function createWarehouseOrder(formData: FormData) {
   const session = await auth();
@@ -35,7 +24,6 @@ export async function createWarehouseOrder(formData: FormData) {
     commissionAmount: (formData.get("commissionAmount") as string) || "0",
     items: JSON.parse(formData.get("items") as string),
   };
-  const salePayment = parsePayment(formData, "sale");
 
   return safeAction(async () => {
     const so = await OrderOrchestrator.createWarehouseOrder(input, {
@@ -43,24 +31,6 @@ export async function createWarehouseOrder(formData: FormData) {
       now: new Date(),
       random: Math.random(),
     });
-
-    // Thanh toán ngay từ KH nếu có
-    if (salePayment) {
-      const invoice = await prisma.invoice.findUnique({ where: { salesOrderId: so.id } });
-      if (invoice) {
-        await PaymentService.recordPayment({
-          direction: PAYMENT_DIRECTION.IN,
-          amount: salePayment.paidAmount,
-          accountId: salePayment.accountId,
-          customerId: input.customerId,
-          applications: [{ invoiceId: invoice.id, appliedAmount: salePayment.paidAmount }],
-          cashFlowGroup: "OPERATIONAL",
-          description: `Thu tiền đơn bán ${so.orderCode}`,
-          userId: session?.user?.id,
-        });
-      }
-    }
-
     revalidatePath("/orders");
     revalidatePath("/cashflow");
     revalidatePath("/debts");
@@ -74,14 +44,11 @@ export async function createDropshipOrder(formData: FormData) {
   await requirePermission(session?.user?.id, "order.create");
   const input: CreateDropshipOrderInput = {
     customerId: formData.get("customerId") as string,
-    supplierId: formData.get("supplierId") as string,
     salespersonId: (formData.get("salespersonId") as string) || undefined,
     saleDate: formData.get("saleDate") ? new Date(formData.get("saleDate") as string) : undefined,
     commissionAmount: (formData.get("commissionAmount") as string) || "0",
     items: JSON.parse(formData.get("items") as string),
   };
-  const purchasePayment = parsePayment(formData, "purchase");
-  const salePayment = parsePayment(formData, "sale");
 
   return safeAction(async () => {
     const result = await OrderOrchestrator.createDropshipOrder(input, {
@@ -89,41 +56,6 @@ export async function createDropshipOrder(formData: FormData) {
       now: new Date(),
       random: Math.random(),
     });
-
-    // Thanh toán NCC ngay nếu có
-    if (purchasePayment) {
-      const inv = await prisma.invoice.findUnique({ where: { purchaseOrderId: result.purchaseOrder.id } });
-      if (inv) {
-        await PaymentService.recordPayment({
-          direction: PAYMENT_DIRECTION.OUT,
-          amount: purchasePayment.paidAmount,
-          accountId: purchasePayment.accountId,
-          supplierId: input.supplierId,
-          applications: [{ invoiceId: inv.id, appliedAmount: purchasePayment.paidAmount }],
-          cashFlowGroup: "OPERATIONAL",
-          description: `Chi trả NCC đơn ${result.purchaseOrder.orderCode}`,
-          userId: session?.user?.id,
-        });
-      }
-    }
-
-    // Thu tiền KH ngay nếu có
-    if (salePayment) {
-      const inv = await prisma.invoice.findUnique({ where: { salesOrderId: result.salesOrder.id } });
-      if (inv) {
-        await PaymentService.recordPayment({
-          direction: PAYMENT_DIRECTION.IN,
-          amount: salePayment.paidAmount,
-          accountId: salePayment.accountId,
-          customerId: input.customerId,
-          applications: [{ invoiceId: inv.id, appliedAmount: salePayment.paidAmount }],
-          cashFlowGroup: "OPERATIONAL",
-          description: `Thu tiền đơn bán ${result.salesOrder.orderCode}`,
-          userId: session?.user?.id,
-        });
-      }
-    }
-
     revalidatePath("/orders");
     revalidatePath("/cashflow");
     revalidatePath("/debts");
@@ -200,7 +132,7 @@ export async function recordPayment(formData: FormData) {
   });
 }
 
-interface OrderItemInput { productId?: string; productName: string; unit: string; qty: number; buyPrice: string; sellPrice: string; baseCost: string; taxAmount: string; purchaseTaxAmount?: string; taxRate?: number; purchaseTaxRate?: number }
+interface OrderItemInput { productId?: string; productName: string; unit: string; qty: number; buyPrice: string; sellPrice: string; baseCost: string; taxAmount: string; purchaseTaxAmount?: string; taxRate?: number; purchaseTaxRate?: number; supplierId: string; }
 
 /** Unified order creation supporting 3 modes: DROPSHIP, WAREHOUSE, IMPORT */
 export async function createUnifiedOrder(formData: FormData) {
@@ -209,8 +141,6 @@ export async function createUnifiedOrder(formData: FormData) {
   const mode = formData.get("mode") as string;
   const items = JSON.parse(formData.get("items") as string) as OrderItemInput[];
 
-  const purchasePayment = parsePayment(formData, "purchase");
-  const salePayment = parsePayment(formData, "sale");
 
   return safeAction(async () => {
     const processedItems = items.map((it: OrderItemInput) => {
@@ -233,29 +163,37 @@ export async function createUnifiedOrder(formData: FormData) {
       // Create purchase order (nhập kho)
       const { PurchaseOrderService } = await import("@/services/purchase-order.service");
       const { InvoiceService } = await import("@/services/invoice.service");
-      const po = await prisma.$transaction(async (tx) => {
-        const _po = await PurchaseOrderService.createInTx(tx, {
-          supplierId: formData.get("supplierId") as string,
-          warehouseId: formData.get("warehouseId") as string || undefined,
-          orderDate: formData.get("purchaseDate") ? new Date(formData.get("purchaseDate") as string) : undefined,
-          items: processedItems,
-        }, { userId: session?.user?.id, now: new Date(), random: Math.random() });
+      
+      const itemsBySupplier = new Map<string, typeof processedItems>();
+      for (const it of processedItems) {
+        if (!it.supplierId) throw new Error("Mỗi sản phẩm mua phải có Nhà cung cấp.");
+        if (!itemsBySupplier.has(it.supplierId)) itemsBySupplier.set(it.supplierId, []);
+        itemsBySupplier.get(it.supplierId)!.push(it);
+      }
 
-        await InvoiceService.createFromPurchaseOrder(tx, {
-          id: _po.id,
-          supplierId: _po.supplierId,
-          totalAmount: _po.totalAmount.toString(),
-        }, { now: new Date(), random: Math.random() });
+      const pos = await prisma.$transaction(async (tx) => {
+        const _pos = [];
+        for (const [supplierId, supplierItems] of itemsBySupplier.entries()) {
+          const _po = await PurchaseOrderService.createInTx(tx, {
+            supplierId,
+            warehouseId: formData.get("warehouseId") as string || undefined,
+            orderDate: formData.get("purchaseDate") ? new Date(formData.get("purchaseDate") as string) : undefined,
+            items: supplierItems,
+          }, { userId: session?.user?.id, now: new Date(), random: Math.random() });
 
-        return _po;
+          await InvoiceService.createFromPurchaseOrder(tx, {
+            id: _po.id,
+            supplierId: _po.supplierId,
+            totalAmount: _po.totalAmount.toString(),
+          }, { now: new Date(), random: Math.random() });
+          _pos.push(_po);
+        }
+        return _pos;
       }, { maxWait: 15_000, timeout: 30_000 });
 
-      if (purchasePayment) {
-        const inv = await prisma.invoice.findUnique({ where: { purchaseOrderId: po.id } });
-        if (inv) await PaymentService.recordPayment({ direction: PAYMENT_DIRECTION.OUT, amount: purchasePayment.paidAmount, accountId: purchasePayment.accountId, cashFlowGroup: "OPERATIONAL", supplierId: po.supplierId, applications: [{ invoiceId: inv.id, appliedAmount: purchasePayment.paidAmount }], description: `Chi NCC đơn ${po.orderCode}`, userId: session?.user?.id });
-      }
+
       revalidatePath("/orders"); revalidatePath("/cashflow");
-      return { id: po.id, orderCode: po.orderCode };
+      return { id: pos[0]?.id || "", orderCode: pos.map(p => p.orderCode).join(", ") };
     }
 
     if (mode === "WAREHOUSE") {
@@ -269,10 +207,7 @@ export async function createUnifiedOrder(formData: FormData) {
         items: processedItems,
       }, { userId: session?.user?.id, now: new Date(), random: Math.random() });
 
-      if (salePayment) {
-        const inv = await prisma.invoice.findUnique({ where: { salesOrderId: so.id } });
-        if (inv) await PaymentService.recordPayment({ direction: PAYMENT_DIRECTION.IN, amount: salePayment.paidAmount, accountId: salePayment.accountId, cashFlowGroup: "OPERATIONAL", customerId: so.customerId, applications: [{ invoiceId: inv.id, appliedAmount: salePayment.paidAmount }], description: `Thu KH đơn ${so.orderCode}`, userId: session?.user?.id });
-      }
+
       revalidatePath("/orders"); revalidatePath("/cashflow"); revalidatePath("/debts");
       return { id: so.id, orderCode: so.orderCode };
     }
@@ -280,21 +215,13 @@ export async function createUnifiedOrder(formData: FormData) {
     // DROPSHIP (default)
     const result = await OrderOrchestrator.createDropshipOrder({
       customerId: formData.get("customerId") as string,
-      supplierId: formData.get("supplierId") as string,
       salespersonId: (formData.get("salespersonId") as string) || undefined,
       saleDate: formData.get("saleDate") ? new Date(formData.get("saleDate") as string) : undefined,
       commissionAmount: (formData.get("commissionAmount") as string) || "0",
       items: processedItems,
     }, { userId: session?.user?.id, now: new Date(), random: Math.random() });
 
-    if (purchasePayment) {
-      const inv = await prisma.invoice.findUnique({ where: { purchaseOrderId: result.purchaseOrder.id } });
-      if (inv) await PaymentService.recordPayment({ direction: PAYMENT_DIRECTION.OUT, amount: purchasePayment.paidAmount, accountId: purchasePayment.accountId, cashFlowGroup: "OPERATIONAL", supplierId: result.purchaseOrder.supplierId, applications: [{ invoiceId: inv.id, appliedAmount: purchasePayment.paidAmount }], description: `Chi NCC dropship ${result.purchaseOrder.orderCode}`, userId: session?.user?.id });
-    }
-    if (salePayment) {
-      const inv = await prisma.invoice.findUnique({ where: { salesOrderId: result.salesOrder.id } });
-      if (inv) await PaymentService.recordPayment({ direction: PAYMENT_DIRECTION.IN, amount: salePayment.paidAmount, accountId: salePayment.accountId, cashFlowGroup: "OPERATIONAL", customerId: result.salesOrder.customerId, applications: [{ invoiceId: inv.id, appliedAmount: salePayment.paidAmount }], description: `Thu KH dropship ${result.salesOrder.orderCode}`, userId: session?.user?.id });
-    }
+
     revalidatePath("/orders"); revalidatePath("/cashflow"); revalidatePath("/debts");
     return { id: result.salesOrder.id, orderCode: result.salesOrder.orderCode };
   });

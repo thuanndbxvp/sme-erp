@@ -31,7 +31,7 @@ export class PurchaseOrderService {
    */
   static async createInTx(
     tx: TxClient,
-    input: CreatePurchaseOrderInput,
+    input: CreatePurchaseOrderInput & { supplierId: string, linkedSalesOrderId?: string },
     meta: CreatePurchaseOrderMeta = {},
   ) {
     const now = meta.now ?? new Date();
@@ -62,6 +62,7 @@ export class PurchaseOrderService {
         status: "ORDERED",
         paymentStatus: "UNPAID",
         supplierId: input.supplierId,
+        linkedSalesOrderId: input.linkedSalesOrderId,
         warehouseId: input.warehouseId ?? null,
         userId: meta.userId ?? null,
         orderDate: input.orderDate ?? now,
@@ -87,7 +88,7 @@ export class PurchaseOrderService {
   }
 
   static async create(
-    input: CreatePurchaseOrderInput,
+    input: CreatePurchaseOrderInput & { supplierId: string, linkedSalesOrderId?: string },
     meta: CreatePurchaseOrderMeta = {},
     prisma: PrismaClient = defaultPrisma,
   ) {
