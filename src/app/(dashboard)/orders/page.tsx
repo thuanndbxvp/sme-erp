@@ -30,6 +30,26 @@ export default async function OrdersPage(props: PageProps) {
   const page = parseInt((params.page as string) || "1", 10);
   const pageSize = 15;
   const skip = (page - 1) * pageSize;
+  const period = params.period || "all";
+  const from = params.from || "";
+  const to = params.to || "";
+
+  let dateFilter: Record<string, Date> | undefined = undefined;
+  const now = new Date();
+  
+  if (period === "today") {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    dateFilter = { gte: start };
+  } else if (period === "week") {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+    start.setHours(0, 0, 0, 0);
+    dateFilter = { gte: start };
+  } else if (period === "month") {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    dateFilter = { gte: start };
+  } else if (period === "custom" && from && to) {
+    dateFilter = { gte: new Date(from as string), lte: new Date(to as string) };
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let salesOrders: any[] = [];
@@ -38,21 +58,23 @@ export default async function OrdersPage(props: PageProps) {
   let totalCount = 0;
 
   if (tab === "SO") {
-    totalCount = await prisma.salesOrder.count();
+    totalCount = await prisma.salesOrder.count({ where: dateFilter ? { createdAt: dateFilter } : undefined });
     salesOrders = await prisma.salesOrder.findMany({
+      where: dateFilter ? { createdAt: dateFilter } : undefined,
       orderBy: { createdAt: "desc" }, skip, take: pageSize,
       include: { customer: { select: { name: true } }, items: { select: { productName: true, qty: true } } },
     });
   } else {
-    totalCount = await prisma.purchaseOrder.count();
+    totalCount = await prisma.purchaseOrder.count({ where: dateFilter ? { createdAt: dateFilter } : undefined });
     purchaseOrders = await prisma.purchaseOrder.findMany({
+      where: dateFilter ? { createdAt: dateFilter } : undefined,
       orderBy: { createdAt: "desc" }, skip, take: pageSize,
       include: { supplier: { select: { name: true } }, items: { select: { productName: true, qty: true } } },
     });
   }
 
-  const soCount = tab === "SO" ? totalCount : await prisma.salesOrder.count();
-  const poCount = tab === "PO" ? totalCount : await prisma.purchaseOrder.count();
+  const soCount = tab === "SO" ? totalCount : await prisma.salesOrder.count({ where: dateFilter ? { createdAt: dateFilter } : undefined });
+  const poCount = tab === "PO" ? totalCount : await prisma.purchaseOrder.count({ where: dateFilter ? { createdAt: dateFilter } : undefined });
 
   return (
     <div>
@@ -70,6 +92,9 @@ export default async function OrdersPage(props: PageProps) {
         totalPages={Math.ceil(totalCount / pageSize)}
         soCount={soCount}
         poCount={poCount}
+        currentPeriod={period as string}
+        currentFrom={from as string}
+        currentTo={to as string}
       />
     </div>
   );
@@ -79,6 +104,7 @@ function OrderTabs(props: {
   salesOrders: SalesOrderRow[]; purchaseOrders: PurchaseOrderRow[];
   initialTab: "SO" | "PO"; currentPage: number; totalPages: number;
   soCount: number; poCount: number;
+  currentPeriod: string; currentFrom: string; currentTo: string;
 }) {
   return <OrderTabsClient {...props} />;
 }

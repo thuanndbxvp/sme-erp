@@ -7,7 +7,7 @@ import Link from "next/link";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export default function OrderTabsClient({ salesOrders, purchaseOrders, initialTab, currentPage, totalPages, soCount, poCount }: { salesOrders: any[]; purchaseOrders: any[]; initialTab: "SO" | "PO"; currentPage: number; totalPages: number; soCount: number; poCount: number }) {
+export default function OrderTabsClient({ salesOrders, purchaseOrders, initialTab, currentPage, totalPages, soCount, poCount, currentPeriod = "all", currentFrom = "", currentTo = "" }: { salesOrders: any[]; purchaseOrders: any[]; initialTab: "SO" | "PO"; currentPage: number; totalPages: number; soCount: number; poCount: number; currentPeriod?: string; currentFrom?: string; currentTo?: string; }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [confirmModal, setConfirmModal] = useState<{
@@ -67,13 +67,19 @@ export default function OrderTabsClient({ salesOrders, purchaseOrders, initialTa
 
   function changeTab(t: "SO" | "PO") {
     startTransition(() => {
-      router.push(`?tab=${t}&page=1`);
+      router.push(`?tab=${t}&page=1&period=${currentPeriod}&from=${currentFrom}&to=${currentTo}`);
     });
   }
 
   function changePage(p: number) {
     startTransition(() => {
-      router.push(`?tab=${initialTab}&page=${p}`);
+      router.push(`?tab=${initialTab}&page=${p}&period=${currentPeriod}&from=${currentFrom}&to=${currentTo}`);
+    });
+  }
+
+  function applyFilter(p: string, f?: string, t?: string) {
+    startTransition(() => {
+      router.push(`?tab=${initialTab}&page=1&period=${p}&from=${f !== undefined ? f : currentFrom}&to=${t !== undefined ? t : currentTo}`);
     });
   }
 
@@ -101,6 +107,20 @@ export default function OrderTabsClient({ salesOrders, purchaseOrders, initialTa
     <div>
       {/* Action bar */}
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "var(--space-4)" }}>
+        <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", alignItems: "center" }}>
+          <span style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--color-foreground-muted)", marginRight: "var(--space-2)" }}>Kỳ báo cáo:</span>
+          {["all", "today", "week", "month"].map(p => (
+            <button key={p} onClick={() => applyFilter(p)} style={{ height: 32, padding: "0 12px", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", fontWeight: 600, cursor: "pointer", border: currentPeriod === p ? "none" : "1px solid var(--color-border-strong)", background: currentPeriod === p ? "var(--color-primary)" : "var(--color-surface)", color: currentPeriod === p ? "white" : "var(--color-foreground)" }}>
+              {p === "all" ? "Tất cả" : p === "today" ? "Hôm nay" : p === "week" ? "Tuần này" : "Tháng này"}
+            </button>
+          ))}
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginLeft: "var(--space-4)" }}>
+            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)" }}>Từ ngày:</span>
+            <input type="date" value={currentFrom} onChange={e => applyFilter("custom", e.target.value, currentTo)} style={{ height: 32, padding: "0 8px", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border-strong)", fontSize: "var(--text-sm)", width: 130 }} />
+            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)" }}>Đến:</span>
+            <input type="date" value={currentTo} onChange={e => applyFilter("custom", currentFrom, e.target.value)} style={{ height: 32, padding: "0 8px", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border-strong)", fontSize: "var(--text-sm)", width: 130 }} />
+          </div>
+        </div>
         <Link href="/orders/new" style={{ height: 40, padding: "0 20px", borderRadius: "var(--radius-md)", fontSize: "var(--text-sm)", fontWeight: 600, background: "var(--color-primary)", color: "white", border: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", textDecoration: "none" }}>+ Tạo đơn mới</Link>
       </div>
 
