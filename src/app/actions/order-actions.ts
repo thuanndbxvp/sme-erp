@@ -231,6 +231,9 @@ export async function recordTransaction(formData: FormData) {
   const session = await auth();
   await requirePermission(session?.user?.id, "cashflow.create");
   const categoryId = (formData.get("categoryId") as string) || null;
+  const orderId = (formData.get("orderId") as string) || null;
+  const orderType = (formData.get("orderType") as string) || null; // "SALES" | "PURCHASE"
+
   return safeAction(async () => {
     await TransactionService.recordTransactionInTransaction({
       type: formData.get("type") as "INCOME" | "EXPENSE",
@@ -238,7 +241,10 @@ export async function recordTransaction(formData: FormData) {
       accountId: formData.get("accountId") as string,
       description: (formData.get("description") as string) || null,
       userId: session?.user?.id,
+      salesOrderId: orderType === "SALES" ? orderId : undefined,
+      purchaseOrderId: orderType === "PURCHASE" ? orderId : undefined,
     });
+    
     // Nếu có category, map vào cashFlowGroup hoặc ghi note
     if (categoryId) {
       // Category info is used for future cashFlowGroup mapping

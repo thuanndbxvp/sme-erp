@@ -11,7 +11,10 @@ const S: React.CSSProperties = { width: "100%", height: 40, padding: "0 10px", b
 const btn: React.CSSProperties = { height: 40, padding: "0 16px", borderRadius: "var(--radius-md)", fontSize: "var(--text-sm)", fontWeight: 600, cursor: "pointer", border: "none", background: "var(--color-primary)", color: "white" };
 const btnSm: React.CSSProperties = { height: 32, padding: "0 12px", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", fontWeight: 600, cursor: "pointer", border: "none" };
 
-export default function CashflowClient({ accounts, transactions, categories }: { accounts: any[]; transactions: any[]; categories: any[] }) {
+export default function CashflowClient({
+  accounts, transactions, categories, recentSales = [], recentPurchases = [], draftPayslips = [],
+  currentPeriod = "all", currentFrom = "", currentTo = ""
+}: { accounts: any[]; transactions: any[]; categories: any[]; recentSales?: any[]; recentPurchases?: any[]; draftPayslips?: any[]; currentPeriod?: string; currentFrom?: string; currentTo?: string; }) {
   const router = useRouter();
   const [tab, setTab] = useState<"cashflow" | "settings">("cashflow");
 
@@ -28,7 +31,7 @@ export default function CashflowClient({ accounts, transactions, categories }: {
         <TabBtn active={tab === "settings"} onClick={() => setTab("settings")} label="⚙️ Cấu hình" />
       </div>
 
-      {tab === "cashflow" && <CashflowTab accounts={accounts} transactions={transactions} categories={categories} router={router} />}
+      {tab === "cashflow" && <CashflowTab accounts={accounts} transactions={transactions} categories={categories} router={router} recentSales={recentSales} recentPurchases={recentPurchases} draftPayslips={draftPayslips} currentPeriod={currentPeriod} currentFrom={currentFrom} currentTo={currentTo} />}
       {tab === "settings" && <SettingsTab accounts={accounts} categories={categories} router={router} />}
     </div>
   );
@@ -39,13 +42,33 @@ function TabBtn({ active, onClick, label }: { active: boolean; onClick: () => vo
 }
 
 /* ====== SỔ QUỸ TAB ====== */
-function CashflowTab({ accounts, transactions, categories, router }: { accounts: any[]; transactions: any[]; categories: any[]; router: any }) {
+function CashflowTab({ accounts, transactions, categories, router, recentSales, recentPurchases, draftPayslips, currentPeriod, currentFrom, currentTo }: any) {
   const [pending, startTransition] = useTransition();
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editTx, setEditTx] = useState<any | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
+
+  const [categoryId, setCategoryId] = useState("");
+  const selectedCat = categories.find((c: any) => c.id === categoryId);
+  const isBusinessExpense = selectedCat && selectedCat.name.toLowerCase().includes("chi phí kinh doanh");
+  const isSalary = selectedCat && selectedCat.name.toLowerCase().includes("lương");
+
+  const [orderId, setOrderId] = useState("");
+  const [userId, setUserId] = useState("");
+  const [amount, setAmount] = useState("");
+
+  function handleUserChange(e: any) {
+    const uid = e.target.value;
+    setUserId(uid);
+    const slip = draftPayslips.find((d: any) => d.userId === uid);
+    if (slip) {
+      setAmount(slip.suggestedNetPay.replace(/\.0+$/, "")); // bỏ số 0 thập phân
+    } else {
+      setAmount("");
+    }
+  }
 
   const roots = categories.filter((c: any) => !c.parentId);
   const children = (pid: string) => categories.filter((c: any) => c.parentId === pid);
@@ -55,6 +78,35 @@ function CashflowTab({ accounts, transactions, categories, router }: { accounts:
 
   function onSubmit(fd: FormData) {
     setError(null);
+    if (isSalary) {
+      import("@/app/actions/hr-actions").then(m => {
+        startTransition(async () => {
+          const slip = draftPayslips.find((d: any) => d.userId === userId);
+          if (!slip) { setError("Không tìm thấy dữ liệu lương"); return; }
+          const payrollFd = new FormData();
+          payrollFd.append("userId", slip.userId);
+          payrollFd.append("month", slip.month.toString());
+          payrollFd.append("year", slip.year.toString());
+          payrollFd.append("baseSalaryAmount", slip.baseSalary);
+          payrollFd.append("commissionAmount", slip.approvedCommission);
+          payrollFd.append("advanceDeduction", slip.maxDeduction);
+          payrollFd.append("netPay", fd.get("amount") as string);
+          payrollFd.append("accountId", fd.get("accountId") as string);
+          
+          const r = await m.finalizePayrollAction(payrollFd);
+          if (r.ok) { setShowForm(false); router.refresh(); }
+          else setError(r.error || "Có lỗi xảy ra");
+        });
+      });
+      return;
+    }
+
+    if (isBusinessExpense && orderId) {
+      fd.append("orderId", orderId);
+      const isSales = recentSales.some((o: any) => o.id === orderId);
+      fd.append("orderType", isSales ? "SALES" : "PURCHASE");
+    }
+
     startTransition(async () => { const r = await recordTransaction(fd); if (r.ok) { setShowForm(false); router.refresh(); } else setError(r.error || "Có lỗi xảy ra"); });
   }
 
@@ -99,7 +151,23 @@ function CashflowTab({ accounts, transactions, categories, router }: { accounts:
             </div>
           ))}
         </div>
+      </div>
 
+      <div style={{ display: "flex", gap: "var(--space-2)", marginBottom: "var(--space-4)", flexWrap: "wrap", alignItems: "center" }}>
+        <span style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--color-foreground-muted)", marginRight: "var(--space-2)" }}>Kỳ báo cáo:</span>
+        {["all", "today", "week", "month"].map(p => (
+          <button key={p} onClick={() => router.push(`/cashflow?period=${p}`)} style={{ ...btnSm, background: currentPeriod === p ? "var(--color-primary)" : "var(--color-surface)", color: currentPeriod === p ? "white" : "var(--color-foreground)", border: currentPeriod === p ? "none" : "1px solid var(--color-border-strong)" }}>
+            {p === "all" ? "Tất cả" : p === "today" ? "Hôm nay" : p === "week" ? "Tuần này" : "Tháng này"}
+          </button>
+        ))}
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginLeft: "var(--space-4)" }}>
+          <span style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)" }}>Từ ngày:</span>
+          <input type="date" value={currentFrom} onChange={e => router.push(`/cashflow?period=custom&from=${e.target.value}&to=${currentTo}`)} style={{ ...S, width: 130, height: 32 }} />
+          <span style={{ fontSize: "var(--text-xs)", color: "var(--color-foreground-muted)" }}>Đến:</span>
+          <input type="date" value={currentTo} onChange={e => router.push(`/cashflow?period=custom&from=${currentFrom}&to=${e.target.value}`)} style={{ ...S, width: 130, height: 32 }} />
+        </div>
+        
+        <div style={{ flex: 1 }} />
         <button onClick={() => setShowForm(!showForm)} style={{...btn, whiteSpace: "nowrap"}}>+ Ghi nhận</button>
       </div>
 
@@ -110,7 +178,7 @@ function CashflowTab({ accounts, transactions, categories, router }: { accounts:
             <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
               <div>
                 <label style={{ fontSize: "var(--text-xs)", fontWeight: 600, display: "block", marginBottom: 2 }}>Phân loại *</label>
-                <select name="categoryId" style={S} required>
+                <select name="categoryId" style={S} value={categoryId} onChange={e => setCategoryId(e.target.value)} required>
                   <option value="">-- Chọn --</option>
                   {roots.map((r: any) => (
                     <optgroup key={r.id} label={r.name}>
@@ -126,12 +194,50 @@ function CashflowTab({ accounts, transactions, categories, router }: { accounts:
               </div>
             </div>
             
-            <select name="type" style={S}><option value="INCOME">Thu vào</option><option value="EXPENSE">Chi ra</option></select>
+            {isBusinessExpense && (
+              <div style={{ gridColumn: "1 / -1", background: "#EFF6FF", padding: "var(--space-3)", borderRadius: "var(--radius-sm)", border: "1px solid #BFDBFE" }}>
+                <label style={{ fontSize: "var(--text-xs)", fontWeight: 600, display: "block", marginBottom: 2, color: "#1D4ED8" }}>Chọn đơn hàng (Chi phí kinh doanh)</label>
+                <select value={orderId} onChange={e => setOrderId(e.target.value)} style={{ ...S, border: "1px solid #BFDBFE" }}>
+                  <option value="">-- Không chọn --</option>
+                  <optgroup label="Đơn Bán">
+                    {recentSales.map((o: any) => <option key={o.id} value={o.id}>{o.orderCode}</option>)}
+                  </optgroup>
+                  <optgroup label="Đơn Mua">
+                    {recentPurchases.map((o: any) => <option key={o.id} value={o.id}>{o.orderCode}</option>)}
+                  </optgroup>
+                </select>
+              </div>
+            )}
+
+            {isSalary && (
+              <div style={{ gridColumn: "1 / -1", background: "#FEF2F2", padding: "var(--space-3)", borderRadius: "var(--radius-sm)", border: "1px solid #FECACA" }}>
+                <label style={{ fontSize: "var(--text-xs)", fontWeight: 600, display: "block", marginBottom: 2, color: "#B91C1C" }}>Chọn nhân viên (Thanh toán lương)</label>
+                <select value={userId} onChange={handleUserChange} style={{ ...S, border: "1px solid #FECACA" }} required={isSalary}>
+                  <option value="">-- Chọn Nhân viên --</option>
+                  {draftPayslips.map((d: any) => <option key={d.userId} value={d.userId}>{d.userName}</option>)}
+                </select>
+                {userId && draftPayslips.find((d: any) => d.userId === userId) && (() => {
+                  const slip = draftPayslips.find((d: any) => d.userId === userId);
+                  return (
+                    <div style={{ fontSize: "var(--text-xs)", color: "#B91C1C", marginTop: 4, display: "flex", gap: 12 }}>
+                      <span>Lương cứng: {Number(slip.baseSalary).toLocaleString("vi-VN")}</span>
+                      <span>+ HH: {Number(slip.approvedCommission).toLocaleString("vi-VN")}</span>
+                      <span>- Ứng: {Number(slip.currentDebt).toLocaleString("vi-VN")}</span>
+                      <span style={{ fontWeight: 700 }}>= Thực lãnh: {Number(slip.suggestedNetPay).toLocaleString("vi-VN")} đ</span>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+            
+            <select name="type" style={S} value={isSalary ? "EXPENSE" : undefined} disabled={isSalary}><option value="INCOME">Thu vào</option><option value="EXPENSE">Chi ra</option></select>
+            {isSalary && <input type="hidden" name="type" value="EXPENSE" />}
+            
             <div style={{ position: "relative" }}>
-              <input name="amount" type="number" step="1" min="1" placeholder="Số tiền" style={{...S, paddingRight: 30}} required />
+              <input name="amount" type="number" step="1" min="1" placeholder="Số tiền" value={amount} onChange={e => setAmount(e.target.value)} style={{...S, paddingRight: 30}} required />
               <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: "var(--text-sm)", color: "var(--color-foreground-muted)", pointerEvents: "none" }}>đ</span>
             </div>
-            <input name="description" placeholder="Diễn giải" style={{...S, gridColumn: "1 / -1"}} />
+            <input name="description" placeholder="Diễn giải" defaultValue={isSalary ? `Thanh toán lương tháng ${new Date().getMonth()+1}/${new Date().getFullYear()}` : ""} style={{...S, gridColumn: "1 / -1"}} />
             
             <div style={{ display: "flex", gap: "var(--space-3)", gridColumn: "1 / -1" }}>
               <button type="submit" disabled={pending} style={btn}>{pending ? "..." : "Xác nhận Ghi nhận"}</button>
