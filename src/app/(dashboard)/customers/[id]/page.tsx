@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import PaymentForm from "@/components/debts/PaymentForm";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,8 @@ export default async function CustomerDetailPage({ params }: Params) {
   const totalAR = customer.invoices.filter(i => i.type === "AR").reduce((s, i) => s + Number(i.balanceDue), 0);
   const totalPaid = customer.invoices.filter(i => i.type === "AR").reduce((s, i) => s + Number(i.paidAmount), 0);
   const totalInvoiced = customer.invoices.filter(i => i.type === "AR").reduce((s, i) => s + Number(i.totalAmount), 0);
+
+  const accounts = await prisma.account.findMany({ where: { isActive: true }, orderBy: { code: "asc" } });
 
   return (
     <div>
@@ -35,7 +38,16 @@ export default async function CustomerDetailPage({ params }: Params) {
       </div>
 
       {/* Invoices */}
-      <h2 style={{ fontSize: "var(--text-lg)", fontWeight: 600, marginBottom: "var(--space-3)" }}>Hóa đơn / Công nợ ({customer.invoices.length})</h2>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-3)" }}>
+        <h2 style={{ fontSize: "var(--text-lg)", fontWeight: 600, margin: 0 }}>Hóa đơn / Công nợ ({customer.invoices.length})</h2>
+        <PaymentForm 
+          accounts={JSON.parse(JSON.stringify(accounts))} 
+          arInvoices={JSON.parse(JSON.stringify(customer.invoices.filter(i => i.type === "AR" && Number(i.balanceDue) > 0).map(i => ({ ...i, customer }))))} 
+          apInvoices={[]} 
+          defaultDirection="IN" 
+          hideDirection={true} 
+        />
+      </div>
       <div style={{ background: "var(--color-surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", overflow: "hidden", marginBottom: "var(--space-6)" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)", fontVariantNumeric: "tabular-nums" }}>
           <thead><tr style={{ borderBottom: "1px solid var(--color-border)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--color-foreground-muted)", textTransform: "uppercase" }}>

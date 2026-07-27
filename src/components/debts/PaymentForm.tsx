@@ -19,13 +19,15 @@ interface Props {
   accounts: any[];
   arInvoices: Invoice[];
   apInvoices: Invoice[];
+  defaultDirection?: "IN" | "OUT";
+  hideDirection?: boolean;
 }
 
-export default function PaymentForm({ accounts, arInvoices, apInvoices }: Props) {
+export default function PaymentForm({ accounts, arInvoices, apInvoices, defaultDirection = "IN", hideDirection = false }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [show, setShow] = useState(false);
-  const [direction, setDirection] = useState<"IN" | "OUT">("IN");
+  const [direction, setDirection] = useState<"IN" | "OUT">(defaultDirection);
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
   const [selectedInvoices, setSelected] = useState<Array<{ invoiceId: string; amount: string; label: string }>>([]);
   const [msg, setMsg] = useState<string | null>(null);
@@ -55,6 +57,15 @@ export default function PaymentForm({ accounts, arInvoices, apInvoices }: Props)
     fd.set("accountId", accountId);
     fd.set("applications", JSON.stringify(selectedInvoices.map(s => ({ invoiceId: s.invoiceId, appliedAmount: s.amount }))));
     fd.set("description", `Thanh toán ${selectedInvoices.length} hóa đơn`);
+
+    // Extract customerId or supplierId from the first selected invoice to link the transaction
+    const firstSelected = invoices.find(inv => inv.id === selectedInvoices[0]?.invoiceId);
+    if (direction === "IN" && firstSelected?.customer?.id) {
+      fd.set("customerId", firstSelected.customer.id);
+    } else if (direction === "OUT" && firstSelected?.supplier?.id) {
+      fd.set("supplierId", firstSelected.supplier.id);
+    }
+
     startTransition(async () => {
       const r = await recordPayment(fd);
       if (r.ok) { setMsg("Đã ghi nhận thanh toán!"); setShow(false); setSelected([]); router.refresh(); }
@@ -76,13 +87,15 @@ export default function PaymentForm({ accounts, arInvoices, apInvoices }: Props)
           {msg && <div style={{ padding: "var(--space-3)", background: msg.includes("Đã") ? "var(--color-success-bg)" : "var(--color-destructive-bg)", color: msg.includes("Đã") ? "var(--color-success)" : "var(--color-destructive)", borderRadius: "var(--radius-md)", fontSize: "var(--text-sm)", marginBottom: "var(--space-4)" }}>{msg}</div>}
           <div style={{ display: "grid", gap: "var(--space-4)" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
-              <div>
-                <label style={{ fontSize: "var(--text-xs)", fontWeight: 600, display: "block", marginBottom: 2 }}>Loại</label>
-                <select value={direction} onChange={e => { setDirection(e.target.value as "IN" | "OUT"); setSelected([]); }} style={S}>
-                  <option value="IN">💰 Thu tiền KH (AR)</option>
-                  <option value="OUT">💸 Trả tiền NCC (AP)</option>
-                </select>
-              </div>
+              {!hideDirection && (
+                <div>
+                  <label style={{ fontSize: "var(--text-xs)", fontWeight: 600, display: "block", marginBottom: 2 }}>Loại</label>
+                  <select value={direction} onChange={e => { setDirection(e.target.value as "IN" | "OUT"); setSelected([]); }} style={S}>
+                    <option value="IN">💰 Thu tiền KH (AR)</option>
+                    <option value="OUT">💸 Trả tiền NCC (AP)</option>
+                  </select>
+                </div>
+              )}
               <div>
                 <label style={{ fontSize: "var(--text-xs)", fontWeight: 600, display: "block", marginBottom: 2 }}>Tài khoản</label>
                 <select value={accountId} onChange={e => setAccountId(e.target.value)} style={S}>

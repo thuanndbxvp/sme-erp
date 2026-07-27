@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { requirePermission, hasPermission } from "@/lib/authorize";
-import EditOrderClient from "../EditOrderClient";
+import UnifiedOrderForm from "../../new/UnifiedOrderForm";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +30,25 @@ export default async function EditOrderPage(props: PageProps) {
 
   const products = await prisma.product.findMany({ where: { isActive: true }, orderBy: { name: "asc" } });
   const accounts = await prisma.account.findMany({ where: { isActive: true }, orderBy: { code: "asc" } });
+  const customers = await prisma.customer.findMany({ where: { isActive: true }, orderBy: { name: "asc" } });
+  const suppliers = await prisma.supplier.findMany({ where: { isActive: true }, orderBy: { name: "asc" } });
+  const warehouses = await prisma.warehouse.findMany({ where: { isActive: true }, orderBy: { name: "asc" } });
+
+  const productSupplierMap: Record<string, string[]> = {};
+  const allPos = await prisma.purchaseOrder.findMany({
+    where: { status: { in: ["ORDERED", "RECEIVED"] } },
+    select: { supplierId: true, items: { select: { productId: true } } },
+  });
+  for (const po of allPos) {
+    for (const item of po.items) {
+      if (item.productId) {
+        if (!productSupplierMap[item.productId]) productSupplierMap[item.productId] = [];
+        if (!productSupplierMap[item.productId]!.includes(po.supplierId)) {
+          productSupplierMap[item.productId]!.push(po.supplierId);
+        }
+      }
+    }
+  }
 
   const canEditDate = await hasPermission(session?.user?.id, "order.edit_date");
 
@@ -46,7 +65,7 @@ export default async function EditOrderPage(props: PageProps) {
         taxAmount: String(soi.taxAmount),
       };
     }
-    const poi = it as { productId: string | null; productName: string; unit: string; qty: number; buyPrice: unknown; taxAmount: unknown };
+    const poi = it as { productId: string | null; productName: string; unit: string; qty: number; buyPrice: unknown; taxAmount: unknown, supplierId?: string };
     return {
       productId: poi.productId,
       productName: poi.productName,
@@ -54,19 +73,26 @@ export default async function EditOrderPage(props: PageProps) {
       qty: poi.qty,
       buyPrice: String(poi.buyPrice),
       taxAmount: String(poi.taxAmount),
+      supplierId: poi.supplierId,
     };
   });
 
   return (
     <div>
-      <EditOrderClient
-        initial={{
+      <UnifiedOrderForm
+        customers={JSON.parse(JSON.stringify(customers))}
+        suppliers={JSON.parse(JSON.stringify(suppliers))}
+        warehouses={JSON.parse(JSON.stringify(warehouses))}
+        products={JSON.parse(JSON.stringify(products))}
+        productSupplierMap={productSupplierMap}
+        initialOrder={{
           id: order.id,
           orderCode: order.orderCode,
           status: order.status,
           type,
           items: initialItems,
           refundAccountId: sp.accountId ?? accounts[0]?.id,
+          customerId: (order as any).customerId,
           saleDate: orderWithDate?.saleDate
             ? (orderWithDate.saleDate instanceof Date
                 ? orderWithDate.saleDate.toISOString().substring(0, 10)
@@ -78,8 +104,6 @@ export default async function EditOrderPage(props: PageProps) {
                 : String(orderWithDate.orderDate).substring(0, 10))
             : null,
         }}
-        products={JSON.parse(JSON.stringify(products))}
-        canEditDate={canEditDate}
       />
     </div>
   );

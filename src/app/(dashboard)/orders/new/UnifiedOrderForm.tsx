@@ -51,7 +51,19 @@ function fmtVND(v: any): string { const n = Number(String(v).replace(/\D/g, ""))
 
 interface ItemRow { id: string; productName: string; unit: string; qty: number; buyPrice: string; sellPrice: string; baseCost: string; purchaseTaxRate: string; taxRate: string; supplierId: string }
 
-export default function UnifiedOrderForm({ customers: initCust, suppliers: initSupp, warehouses, products: initProd, productSupplierMap = {} }: { customers: any[]; suppliers: any[]; warehouses: any[]; products: any[]; productSupplierMap?: Record<string, string[]> }) {
+export interface EditOrderInitial {
+  id: string;
+  orderCode: string;
+  status: string;
+  type: "SO" | "PO";
+  items: any[];
+  refundAccountId?: string;
+  saleDate?: string | null;
+  orderDate?: string | null;
+  customerId?: string;
+}
+
+export default function UnifiedOrderForm({ customers: initCust, suppliers: initSupp, warehouses, products: initProd, productSupplierMap = {}, initialOrder }: { customers: any[]; suppliers: any[]; warehouses: any[]; products: any[]; productSupplierMap?: Record<string, string[]>, initialOrder?: EditOrderInitial }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -62,12 +74,17 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
   const [addCust, setAddCust] = useState(false);
   const [addProd, setAddProd] = useState(false);
 
-  const [mode, setMode] = useState<"DROPSHIP" | "WAREHOUSE" | "IMPORT">("IMPORT");
-  const [customerId, setCustomerId] = useState(customers[0]?.id ?? "");
+  const isEdit = !!initialOrder;
+  const isSO = initialOrder?.type === "SO";
+  const [mode, setMode] = useState<"DROPSHIP" | "WAREHOUSE" | "IMPORT">(
+    initialOrder ? (isSO ? "WAREHOUSE" : "IMPORT") : "IMPORT"
+  );
+  const [customerId, setCustomerId] = useState(initialOrder?.customerId ?? customers[0]?.id ?? "");
   const [warehouseId, setWarehouseId] = useState(warehouses[0]?.id ?? "");
   const today = new Date().toISOString();
-  const [saleDate, setSaleDate] = useState(today.substring(0, today.indexOf("T")));
-  const [purchaseDate, setPurchaseDate] = useState(today.substring(0, today.indexOf("T")));
+  
+  const [saleDate, setSaleDate] = useState(initialOrder?.saleDate ?? today.substring(0, today.indexOf("T")));
+  const [purchaseDate, setPurchaseDate] = useState(initialOrder?.orderDate ?? today.substring(0, today.indexOf("T")));
   const [expectedDate, setExpectedDate] = useState("");
   const [deliveredDate, setDeliveredDate] = useState("");
   const [receivedDate, setReceivedDate] = useState("");
@@ -76,12 +93,32 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
   const [commissionAmount, setCommissionAmount] = useState("0"); // MSEW-payroll-hr: hoa hồng cố định
   const [notes, setNotes] = useState("");
 
+  const initialItems: ItemRow[] = initialOrder ? initialOrder.items.map((it, idx) => {
+    const qty = Number(it.qty) || 1;
+    const basePrice = isSO ? Number(it.sellPrice) : Number(it.buyPrice);
+    const taxAmount = Number(it.taxAmount) || 0;
+    const taxRate = basePrice > 0 ? (taxAmount / (basePrice * qty)) * 100 : 0;
+    
+    return {
+      id: String(Date.now() + idx),
+      productId: it.productId,
+      productName: it.productName,
+      unit: it.unit || "cái",
+      qty: qty,
+      buyPrice: !isSO ? String(it.buyPrice || 0) : "0",
+      sellPrice: isSO ? String(it.sellPrice || 0) : "0",
+      baseCost: String(it.baseCost || 0),
+      purchaseTaxRate: !isSO ? String(taxRate) : "0",
+      taxRate: isSO ? String(taxRate) : "0",
+      supplierId: it.supplierId ?? suppliers[0]?.id ?? ""
+    };
+  }) : [{ id: "1", productName: "", unit: "cái", qty: 1, buyPrice: "", sellPrice: "", baseCost: "", purchaseTaxRate: "", taxRate: "", supplierId: suppliers[0]?.id ?? "" }];
 
   // Global tax rates
   const [purchaseTaxRate, setPurchaseTaxRate] = useState("");
   const [saleTaxRate, setSaleTaxRate] = useState("");
 
-  const [items, setItems] = useState<ItemRow[]>([{ id: "1", productName: "", unit: "cái", qty: 1, buyPrice: "", sellPrice: "", baseCost: "", purchaseTaxRate: "", taxRate: "", supplierId: suppliers[0]?.id ?? "" }]);
+  const [items, setItems] = useState<ItemRow[]>(initialItems);
 
   function addItem() { setItems([...items, { id: String(Date.now()), productName: "", unit: "cái", qty: 1, buyPrice: "", sellPrice: "", baseCost: "", purchaseTaxRate: "", taxRate: "", supplierId: suppliers[0]?.id ?? "" }]); }
   function removeItem(id: string) { if (items.length > 1) setItems(items.filter(it => it.id !== id)); }
@@ -139,13 +176,28 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
       fd.set("saleTaxRate", saleTaxRate);
       fd.set("purchaseTaxRate", purchaseTaxRate);
 
+      if (isEdit && initialOrder) {
+        const { editSalesOrderAction, editPurchaseOrderAction } = await import("@/app/(dashboard)/orders/actions");
+        startTransition(async () => {
+          const payload = { items: normalizedItems } as any;
+          if (isSO) payload.saleDate = saleDate;
+          else payload.orderDate = purchaseDate;
 
-      const { createUnifiedOrder } = await import("@/app/actions/order-actions");
-      startTransition(async () => {
-        const r = await createUnifiedOrder(fd);
-        if (r.ok) { router.push("/orders"); router.refresh(); }
-        else setError(r.error);
-      });
+          const r = isSO 
+            ? await editSalesOrderAction(initialOrder.id, payload)
+            : await editPurchaseOrderAction(initialOrder.id, payload);
+            
+          if (r.ok) { router.push("/orders"); router.refresh(); }
+          else setError(r.error);
+        });
+      } else {
+        const { createUnifiedOrder } = await import("@/app/actions/order-actions");
+        startTransition(async () => {
+          const r = await createUnifiedOrder(fd);
+          if (r.ok) { router.push("/orders"); router.refresh(); }
+          else setError(r.error);
+        });
+      }
     } catch (e: any) { setError(e.message); }
   }
 
@@ -160,9 +212,17 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
 
       {/* Mode + Status */}
       <div style={{ display: "flex", gap: "var(--space-2)", marginBottom: "var(--space-5)", flexWrap: "wrap", alignItems: "end" }}>
-        <ModeBtn active={mode === "IMPORT"} onClick={() => setMode("IMPORT")} color="#16A34A" label="🏗 Nhập kho (Mua hàng)" />
-        <ModeBtn active={mode === "WAREHOUSE"} onClick={() => setMode("WAREHOUSE")} color="#2563EB" label="📦 Bán từ kho" />
-        <ModeBtn active={mode === "DROPSHIP"} onClick={() => setMode("DROPSHIP")} color="#D97706" label="🔄 Dropship (Mua + Bán)" />
+        {isEdit ? (
+          <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, margin: 0 }}>
+            Sửa đơn {isSO ? "bán" : "mua"} {initialOrder?.orderCode}
+          </h1>
+        ) : (
+          <>
+            <ModeBtn active={mode === "IMPORT"} onClick={() => setMode("IMPORT")} color="#16A34A" label="🏗 Nhập kho (Mua hàng)" />
+            <ModeBtn active={mode === "WAREHOUSE"} onClick={() => setMode("WAREHOUSE")} color="#2563EB" label="📦 Bán từ kho" />
+            <ModeBtn active={mode === "DROPSHIP"} onClick={() => setMode("DROPSHIP")} color="#D97706" label="🔄 Dropship (Mua + Bán)" />
+          </>
+        )}
       </div>
 
       {/* 2-Column Layout for Dropship */}
@@ -330,7 +390,7 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
       {/* Actions */}
       <div style={{ display: "flex", gap: "var(--space-3)" }}>
         <button onClick={onSubmit} disabled={pending} style={btn}>
-          {pending ? "⏳ Đang tạo..." : mode === "DROPSHIP" ? "🚀 Tạo đơn Dropship (Mua + Bán)" : mode === "WAREHOUSE" ? "📦 Tạo đơn Bán từ kho" : "🏗 Tạo đơn Nhập kho"}
+          {pending ? (isEdit ? "⏳ Đang lưu..." : "⏳ Đang tạo...") : (isEdit ? "Lưu thay đổi" : (mode === "DROPSHIP" ? "🚀 Tạo đơn Dropship (Mua + Bán)" : mode === "WAREHOUSE" ? "📦 Tạo đơn Bán từ kho" : "🏗 Tạo đơn Nhập kho"))}
         </button>
         <button onClick={() => router.push("/orders")} style={btnSec}>Hủy</button>
       </div>
