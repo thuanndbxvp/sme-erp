@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { recordPayment } from "@/app/actions/order-actions";
 
@@ -13,6 +13,7 @@ interface Invoice {
   supplier?: { id: string; name: string } | null;
   salesOrder?: { orderCode: string } | null;
   purchaseOrder?: { orderCode: string } | null;
+  createdAt?: any;
 }
 
 interface Props {
@@ -34,6 +35,40 @@ export default function PaymentForm({ accounts, arInvoices, apInvoices, defaultD
 
   const invoices = direction === "IN" ? arInvoices : apInvoices;
 
+  const [period, setPeriod] = useState<string>("all");
+  const [customFrom, setCustomFrom] = useState<string>("");
+  const [customTo, setCustomTo] = useState<string>("");
+
+  const filteredInvoices = useMemo(() => {
+    let list = invoices;
+    if (period !== "all") {
+      const now = new Date();
+      if (period === "today") {
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        list = list.filter(i => i.createdAt && new Date(i.createdAt).getTime() >= start);
+      } else if (period === "week") {
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay()).getTime();
+        list = list.filter(i => i.createdAt && new Date(i.createdAt).getTime() >= start);
+      } else if (period === "month") {
+        const start = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+        list = list.filter(i => i.createdAt && new Date(i.createdAt).getTime() >= start);
+      } else if (period === "quarter") {
+        const q = Math.floor(now.getMonth() / 3);
+        const start = new Date(now.getFullYear(), q * 3, 1).getTime();
+        list = list.filter(i => i.createdAt && new Date(i.createdAt).getTime() >= start);
+      } else if (period === "custom" && customFrom && customTo) {
+        const start = new Date(customFrom).getTime();
+        const end = new Date(customTo).getTime() + 86400000;
+        list = list.filter(i => {
+          if (!i.createdAt) return false;
+          const t = new Date(i.createdAt).getTime();
+          return t >= start && t < end;
+        });
+      }
+    }
+    return list;
+  }, [invoices, period, customFrom, customTo]);
+
   function toggleInvoice(inv: Invoice) {
     const exists = selectedInvoices.find(s => s.invoiceId === inv.id);
     if (exists) {
@@ -45,6 +80,14 @@ export default function PaymentForm({ accounts, arInvoices, apInvoices, defaultD
 
   function updateAmount(invoiceId: string, amount: string) {
     setSelected(selectedInvoices.map(s => s.invoiceId === invoiceId ? { ...s, amount } : s));
+  }
+
+  function toggleSelectAll() {
+    if (selectedInvoices.length === filteredInvoices.length) {
+      setSelected([]);
+    } else {
+      setSelected(filteredInvoices.map(inv => ({ invoiceId: inv.id, amount: inv.balanceDue.toString(), label: `${inv.invoiceNumber} — ${direction === "IN" ? inv.customer?.name : inv.supplier?.name} (${Number(inv.balanceDue).toLocaleString("vi-VN")} đ)` })));
+    }
   }
 
   const totalSelected = selectedInvoices.reduce((s, inv) => s + (Number(inv.amount) || 0), 0);
@@ -97,7 +140,9 @@ export default function PaymentForm({ accounts, arInvoices, apInvoices, defaultD
                 </div>
               )}
               <div>
-                <label style={{ fontSize: "var(--text-xs)", fontWeight: 600, display: "block", marginBottom: 2 }}>Tài khoản</label>
+                <label style={{ fontSize: "var(--text-xs)", fontWeight: 600, display: "block", marginBottom: 2 }}>
+                  {direction === "IN" ? "Tài khoản nhận tiền" : "Tài khoản chi tiền"}
+                </label>
                 <select value={accountId} onChange={e => setAccountId(e.target.value)} style={S}>
                   {accounts.map((a: any) => <option key={a.id} value={a.id}>{a.code} — {a.name} ({Number(a.balance).toLocaleString("vi-VN")} đ)</option>)}
                 </select>
@@ -106,15 +151,36 @@ export default function PaymentForm({ accounts, arInvoices, apInvoices, defaultD
 
             {/* Invoice selector */}
             <div>
-              <label style={{ fontSize: "var(--text-xs)", fontWeight: 600, display: "block", marginBottom: 4 }}>
-                Chọn hóa đơn ({selectedInvoices.length} đã chọn — Tổng: {totalSelected.toLocaleString("vi-VN")} đ)
-              </label>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "end", marginBottom: 4, flexWrap: "wrap", gap: 8 }}>
+                <label style={{ fontSize: "var(--text-xs)", fontWeight: 600 }}>
+                  Chọn hóa đơn ({selectedInvoices.length} đã chọn — Tổng: {totalSelected.toLocaleString("vi-VN")} đ)
+                </label>
+                <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", alignItems: "center" }}>
+                  <button onClick={toggleSelectAll} style={{ padding: "4px 8px", fontSize: "var(--text-xs)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border-strong)", background: "var(--color-surface)", cursor: "pointer" }}>
+                    {selectedInvoices.length === filteredInvoices.length && filteredInvoices.length > 0 ? "Bỏ chọn tất cả" : "Chọn tất cả"}
+                  </button>
+                  <select value={period} onChange={e => setPeriod(e.target.value)} style={{ padding: "4px 8px", fontSize: "var(--text-xs)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border-strong)", background: "var(--color-surface)" }}>
+                    <option value="all">Tất cả</option>
+                    <option value="today">Hôm nay</option>
+                    <option value="week">Tuần này</option>
+                    <option value="month">Tháng này</option>
+                    <option value="quarter">Quý này</option>
+                    <option value="custom">Tùy chọn...</option>
+                  </select>
+                  {period === "custom" && (
+                    <>
+                      <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} style={{ padding: "2px 4px", fontSize: "var(--text-xs)", width: 100 }} />
+                      <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} style={{ padding: "2px 4px", fontSize: "var(--text-xs)", width: 100 }} />
+                    </>
+                  )}
+                </div>
+              </div>
               <div style={{ maxHeight: 300, overflowY: "auto", border: "1px solid var(--color-border-strong)", borderRadius: "var(--radius-md)" }}>
-                {invoices.length === 0 ? (
+                {filteredInvoices.length === 0 ? (
                   <div style={{ padding: "var(--space-4)", textAlign: "center", color: "var(--color-foreground-muted)", fontSize: "var(--text-sm)" }}>
                     Không có hóa đơn {direction === "IN" ? "phải thu" : "phải trả"} nào đang mở
                   </div>
-                ) : invoices.map(inv => {
+                ) : filteredInvoices.map(inv => {
                   const sel = selectedInvoices.find(s => s.invoiceId === inv.id);
                   return (
                     <div key={inv.id} style={{ padding: "var(--space-2) var(--space-3)", display: "flex", alignItems: "center", gap: "var(--space-3)", borderBottom: "1px solid var(--color-muted)", background: sel ? "var(--color-primary)08" : "transparent" }}>
@@ -134,7 +200,7 @@ export default function PaymentForm({ accounts, arInvoices, apInvoices, defaultD
 
             <div style={{ display: "flex", gap: "var(--space-3)" }}>
               <button onClick={onSubmit} disabled={pending || selectedInvoices.length === 0} style={{ height: 44, padding: "0 24px", borderRadius: "var(--radius-md)", fontSize: "var(--text-base)", fontWeight: 700, cursor: "pointer", border: "none", background: "var(--color-primary)", color: "white", opacity: selectedInvoices.length === 0 ? 0.5 : 1 }}>
-                {pending ? "⏳ Đang xử lý..." : `✅ Xác nhận thanh toán ${totalSelected.toLocaleString("vi-VN")} đ`}
+                {pending ? "⏳ Đang xử lý..." : `✅ Xác nhận ${direction === 'IN' ? 'thu' : 'chi'} ${totalSelected.toLocaleString("vi-VN")} đ`}
               </button>
               <button onClick={() => { setShow(false); setSelected([]); }} style={{ height: 44, padding: "0 20px", borderRadius: "var(--radius-md)", fontSize: "var(--text-sm)", fontWeight: 600, cursor: "pointer", border: "1px solid var(--color-border-strong)", background: "var(--color-surface)", color: "var(--color-foreground)" }}>Hủy</button>
             </div>

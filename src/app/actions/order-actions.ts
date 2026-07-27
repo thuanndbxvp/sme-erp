@@ -178,7 +178,10 @@ export async function createUnifiedOrder(formData: FormData) {
             supplierId,
             warehouseId: formData.get("warehouseId") as string || undefined,
             orderDate: formData.get("purchaseDate") ? new Date(formData.get("purchaseDate") as string) : undefined,
-            items: supplierItems,
+            items: supplierItems.map((it) => ({
+              ...it,
+              taxAmount: (it as { purchaseTaxAmount?: string }).purchaseTaxAmount || "0"
+            })),
           }, { userId: session?.user?.id, now: new Date(), random: Math.random() });
 
           await InvoiceService.createFromPurchaseOrder(tx, {

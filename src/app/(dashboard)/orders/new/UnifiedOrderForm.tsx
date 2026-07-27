@@ -115,8 +115,8 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
   }) : [{ id: "1", productName: "", unit: "cái", qty: 1, buyPrice: "", sellPrice: "", baseCost: "", purchaseTaxRate: "", taxRate: "", supplierId: suppliers[0]?.id ?? "" }];
 
   // Global tax rates
-  const [purchaseTaxRate, setPurchaseTaxRate] = useState("");
-  const [saleTaxRate, setSaleTaxRate] = useState("");
+  const [purchaseTaxRate, setPurchaseTaxRate] = useState(initialItems[0]?.purchaseTaxRate && initialItems[0]?.purchaseTaxRate !== "0" ? initialItems[0]?.purchaseTaxRate : "");
+  const [saleTaxRate, setSaleTaxRate] = useState(initialItems[0]?.taxRate && initialItems[0]?.taxRate !== "0" ? initialItems[0]?.taxRate : "");
 
   const [items, setItems] = useState<ItemRow[]>(initialItems);
 
@@ -179,7 +179,16 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
       if (isEdit && initialOrder) {
         const { editSalesOrderAction, editPurchaseOrderAction } = await import("@/app/(dashboard)/orders/actions");
         startTransition(async () => {
-          const payload = { items: normalizedItems } as any;
+          const payload = { items: normalizedItems.map(it => {
+            const sellBase = Number(String(it.sellPrice).replace(/\D/g, "")) * it.qty;
+            const sellTax = sellBase * (it.taxRate || 0) / 100;
+            const buyBase = Number(String(it.buyPrice).replace(/\D/g, "")) * it.qty;
+            const buyTax = buyBase * (it.purchaseTaxRate || 0) / 100;
+            return {
+              ...it,
+              taxAmount: isSO ? String(sellTax) : String(buyTax)
+            };
+          }) } as any;
           if (isSO) payload.saleDate = saleDate;
           else payload.orderDate = purchaseDate;
 
@@ -358,12 +367,12 @@ export default function UnifiedOrderForm({ customers: initCust, suppliers: initS
                       {(it.supplierId ? products.filter((p: any) => productSupplierMap[p.id]?.includes(it.supplierId)) : products).map((p: any) => <option key={p.id} value={p.name} />)}
                     </datalist>
                   </td>
-                  <td style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center" }}><input type="number" value={it.qty} onChange={e => updateItem(it.id, "qty", e.target.value)} min={1} style={{ ...S, border: "none", background: "transparent", width: 55, textAlign: "center" }} /></td>
-                  <td style={{ padding: "var(--space-2) var(--space-3)" }}><input value={it.unit} onChange={e => updateItem(it.id, "unit", e.target.value)} style={{ ...S, border: "none", background: "transparent", width: 60 }} /></td>
-                  {showBuyCol && <><td style={{ padding: "var(--space-2) var(--space-3)", textAlign: "right" }}><input value={fmtVND(it.buyPrice)} onChange={e => updateItem(it.id, "buyPrice", e.target.value.replace(/\D/g, ""))} placeholder="0" style={{ ...S, border: "none", background: "transparent", width: 110, textAlign: "right", color: "#C2410C", fontWeight: 600 }} /></td>
-                  <td style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center" }}><input type="number" value={it.purchaseTaxRate} onChange={e => updateItem(it.id, "purchaseTaxRate", e.target.value)} placeholder="0" style={{ ...S, border: "none", background: "transparent", width: 60, textAlign: "center" }} /></td></>}
-                  {showSellCol && <><td style={{ padding: "var(--space-2) var(--space-3)", textAlign: "right" }}><input value={fmtVND(it.sellPrice)} onChange={e => updateItem(it.id, "sellPrice", e.target.value.replace(/\D/g, ""))} placeholder="0" style={{ ...S, border: "none", background: "transparent", width: 110, textAlign: "right", color: "#1D4ED8", fontWeight: 600 }} /></td>
-                  <td style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center" }}><input type="number" value={it.taxRate} onChange={e => updateItem(it.id, "taxRate", e.target.value)} placeholder="0" style={{ ...S, border: "none", background: "transparent", width: 60, textAlign: "center" }} /></td></>}
+                  <td style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center" }}><input type="number" value={it.qty} onChange={e => updateItem(it.id, "qty", e.target.value)} min={1} style={{ ...S, border: "1px solid var(--color-border)", width: 55, textAlign: "center" }} /></td>
+                  <td style={{ padding: "var(--space-2) var(--space-3)" }}><input value={it.unit} onChange={e => updateItem(it.id, "unit", e.target.value)} style={{ ...S, border: "1px solid var(--color-border)", width: 60 }} /></td>
+                  {showBuyCol && <><td style={{ padding: "var(--space-2) var(--space-3)", textAlign: "right" }}><input value={fmtVND(it.buyPrice)} onChange={e => updateItem(it.id, "buyPrice", e.target.value.replace(/\D/g, ""))} placeholder="0" style={{ ...S, border: "1px solid var(--color-border)", width: 110, textAlign: "right", color: "#C2410C", fontWeight: 600 }} /></td>
+                  <td style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center" }}><input type="number" value={it.purchaseTaxRate} onChange={e => updateItem(it.id, "purchaseTaxRate", e.target.value)} placeholder="0" style={{ ...S, border: "1px solid var(--color-border)", width: 60, textAlign: "center" }} /></td></>}
+                  {showSellCol && <><td style={{ padding: "var(--space-2) var(--space-3)", textAlign: "right" }}><input value={fmtVND(it.sellPrice)} onChange={e => updateItem(it.id, "sellPrice", e.target.value.replace(/\D/g, ""))} placeholder="0" style={{ ...S, border: "1px solid var(--color-border)", width: 110, textAlign: "right", color: "#1D4ED8", fontWeight: 600 }} /></td>
+                  <td style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center" }}><input type="number" value={it.taxRate} onChange={e => updateItem(it.id, "taxRate", e.target.value)} placeholder="0" style={{ ...S, border: "1px solid var(--color-border)", width: 60, textAlign: "center" }} /></td></>}
                   {showSellCol && <td style={{ padding: "var(--space-2) var(--space-3)", textAlign: "right", fontWeight: 700, whiteSpace: "nowrap" }}>{(Number(String(it.sellPrice).replace(/\D/g, "")) * (Number(it.qty) || 1) || 0).toLocaleString("vi-VN")} đ</td>}
                   <td style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center" }}><button onClick={() => removeItem(it.id)} style={{ background: "none", border: "none", color: "var(--color-destructive)", cursor: "pointer", fontSize: 18, padding: 2 }} title="Xóa">🗑</button></td>
                 </tr>

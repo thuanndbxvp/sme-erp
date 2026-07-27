@@ -33,6 +33,20 @@ export function CatalogTable({ entity, labelPlural, fields, rows, deactivate }: 
     key: f.name,
     header: f.label,
     align: f.type === "money" ? ("right" as const) : ("left" as const),
+    render: (row) => {
+      if (f.name === "name") {
+        const id = row.id ?? "";
+        const detailHref = (entity === "customer") ? `/customers/${id}` : (entity === "supplier") ? `/suppliers/${id}` : (entity === "product") ? `/products/${id}` : null;
+        if (detailHref) {
+          return (
+            <Link href={detailHref} style={{ color: "var(--color-primary)", textDecoration: "none", fontWeight: 500 }}>
+              {row[f.name]}
+            </Link>
+          );
+        }
+      }
+      return row[f.name];
+    }
   }));
 
   return (
