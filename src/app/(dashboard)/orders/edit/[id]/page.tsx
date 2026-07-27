@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { requirePermission, hasPermission } from "@/lib/authorize";
+import { requirePermission } from "@/lib/authorize";
 import UnifiedOrderForm from "../../new/UnifiedOrderForm";
 
 export const dynamic = "force-dynamic";
@@ -50,7 +50,7 @@ export default async function EditOrderPage(props: PageProps) {
     }
   }
 
-  const canEditDate = await hasPermission(session?.user?.id, "order.edit_date");
+
 
   const initialItems = order.items.map((it) => {
     if (isSO) {
@@ -92,7 +92,7 @@ export default async function EditOrderPage(props: PageProps) {
           type,
           items: initialItems,
           refundAccountId: sp.accountId ?? accounts[0]?.id,
-          customerId: (order as any).customerId,
+          customerId: (order as { customerId?: string }).customerId,
           saleDate: orderWithDate?.saleDate
             ? (orderWithDate.saleDate instanceof Date
                 ? orderWithDate.saleDate.toISOString().substring(0, 10)
