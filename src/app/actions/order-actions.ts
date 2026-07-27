@@ -67,7 +67,15 @@ export async function deliverOrder(formData: FormData) {
   const session = await auth();
   await requirePermission(session?.user?.id, "order.deliver");
   const id = formData.get("id") as string;
+  const password = formData.get("password") as string;
   return safeAction(async () => {
+    if (!password) throw new Error("Vui lòng nhập mật khẩu xác nhận.");
+    const user = await prisma.user.findUnique({ where: { id: session?.user?.id } });
+    if (!user) throw new Error("Không tìm thấy user.");
+    const bcrypt = await import("bcryptjs");
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isMatch) throw new Error("Mật khẩu không chính xác.");
+
     await OrderOrchestrator.deliverSalesOrder(id);
     revalidatePath("/orders");
     await AuditAndSecurityHelper.logAction({ action: "UPDATE", entityType: "SalesOrder", entityId: id, userId: session?.user?.id });
@@ -79,7 +87,15 @@ export async function receiveOrder(formData: FormData) {
   const session = await auth();
   await requirePermission(session?.user?.id, "order.deliver");
   const id = formData.get("id") as string;
+  const password = formData.get("password") as string;
   return safeAction(async () => {
+    if (!password) throw new Error("Vui lòng nhập mật khẩu xác nhận.");
+    const user = await prisma.user.findUnique({ where: { id: session?.user?.id } });
+    if (!user) throw new Error("Không tìm thấy user.");
+    const bcrypt = await import("bcryptjs");
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isMatch) throw new Error("Mật khẩu không chính xác.");
+
     await OrderOrchestrator.receivePurchaseOrder(id, { userId: session?.user?.id });
     revalidatePath("/orders");
     await AuditAndSecurityHelper.logAction({ action: "UPDATE", entityType: "PurchaseOrder", entityId: id, userId: session?.user?.id, metadata: { note: "Nhận hàng" } });

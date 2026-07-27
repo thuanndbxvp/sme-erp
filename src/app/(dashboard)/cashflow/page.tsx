@@ -39,8 +39,8 @@ export default async function CashflowPage({ searchParams }: { searchParams: Pro
     prisma.$queryRawUnsafe<Array<{ id: string; name: string; type: string; parentId: string | null; isActive: boolean }>>(
       `SELECT * FROM "TransactionCategory" ORDER BY "name"`
     ),
-    prisma.salesOrder.findMany({ take: 100, orderBy: { createdAt: "desc" }, select: { id: true, orderCode: true } }),
-    prisma.purchaseOrder.findMany({ take: 100, orderBy: { createdAt: "desc" }, select: { id: true, orderCode: true } }),
+    prisma.salesOrder.findMany({ take: 100, orderBy: { createdAt: "desc" }, select: { id: true, orderCode: true, saleDate: true, customer: { select: { name: true } }, items: true, totalAmount: true } }),
+    prisma.purchaseOrder.findMany({ take: 100, orderBy: { createdAt: "desc" }, select: { id: true, orderCode: true, orderDate: true, supplier: { select: { name: true } }, items: true, totalAmount: true } }),
   ]);
 
   let draftPayslips: DraftPayslip[] = [];

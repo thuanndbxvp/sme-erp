@@ -33,7 +33,7 @@ export default function OrderTabsClient({ salesOrders, purchaseOrders, initialTa
     if (!confirmModal) return;
     const { action, orderId } = confirmModal;
     
-    if (action === "CANCEL" && !password) {
+    if (!password) {
       setError("Vui lòng nhập mật khẩu xác nhận.");
       return;
     }
@@ -42,6 +42,7 @@ export default function OrderTabsClient({ salesOrders, purchaseOrders, initialTa
       setError(null);
       const fd = new FormData();
       fd.set("id", orderId);
+      fd.set("password", password);
       
       let res;
       if (action === "DELIVER") {
@@ -50,7 +51,6 @@ export default function OrderTabsClient({ salesOrders, purchaseOrders, initialTa
         res = await receiveOrder(fd);
       } else {
         fd.set("type", initialTab);
-        fd.set("password", password);
         res = await cancelOrder(fd);
       }
 
@@ -276,19 +276,17 @@ export default function OrderTabsClient({ salesOrders, purchaseOrders, initialTa
                 </ul>
               </div>
 
-              {confirmModal.action === "CANCEL" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  <label style={{ fontWeight: 600, fontSize: "var(--text-sm)" }}>Mật khẩu xác nhận</label>
-                  <input
-                    type="password"
-                    placeholder="Nhập mật khẩu để tiếp tục"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    style={{ padding: "8px 12px", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)", background: "var(--color-surface)", fontSize: "var(--text-sm)" }}
-                  />
-                  {error && <p style={{ margin: "4px 0 0 0", color: "var(--color-destructive)", fontSize: "var(--text-xs)" }}>{error}</p>}
-                </div>
-              )}
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <label style={{ fontWeight: 600, fontSize: "var(--text-sm)" }}>Mật khẩu xác nhận</label>
+                <input
+                  type="password"
+                  placeholder="Nhập mật khẩu để tiếp tục"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={{ padding: "8px 12px", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)", background: "var(--color-surface)", fontSize: "var(--text-sm)" }}
+                />
+                {error && <p style={{ margin: "4px 0 0 0", color: "var(--color-destructive)", fontSize: "var(--text-xs)" }}>{error}</p>}
+              </div>
             </div>
 
             <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border)", display: "flex", justifyContent: "flex-end", gap: 12, background: "var(--color-surface-hover)" }}>

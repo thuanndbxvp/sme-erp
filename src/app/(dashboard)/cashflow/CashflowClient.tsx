@@ -200,10 +200,22 @@ function CashflowTab({ accounts, transactions, categories, router, recentSales, 
                 <select value={orderId} onChange={e => setOrderId(e.target.value)} style={{ ...S, border: "1px solid #BFDBFE" }}>
                   <option value="">-- Không chọn --</option>
                   <optgroup label="Đơn Bán">
-                    {recentSales.map((o: any) => <option key={o.id} value={o.id}>{o.orderCode}</option>)}
+                    {recentSales.map((o: any) => {
+                      const date = o.saleDate ? new Date(o.saleDate).toLocaleDateString("vi-VN") : "";
+                      const partner = o.customer?.name || "Khách lẻ";
+                      const total = Number(o.totalAmount || 0).toLocaleString("vi-VN") + "đ";
+                      const itemSummary = o.items && o.items.length > 0 ? `(${o.items[0].productName}${o.items.length > 1 ? ",..." : ""})` : "";
+                      return <option key={o.id} value={o.id}>{`${o.orderCode} | ${date} | ${partner} | ${total} ${itemSummary}`}</option>;
+                    })}
                   </optgroup>
                   <optgroup label="Đơn Mua">
-                    {recentPurchases.map((o: any) => <option key={o.id} value={o.id}>{o.orderCode}</option>)}
+                    {recentPurchases.map((o: any) => {
+                      const date = o.orderDate ? new Date(o.orderDate).toLocaleDateString("vi-VN") : "";
+                      const partner = o.supplier?.name || "NCC";
+                      const total = Number(o.totalAmount || 0).toLocaleString("vi-VN") + "đ";
+                      const itemSummary = o.items && o.items.length > 0 ? `(${o.items[0].productName}${o.items.length > 1 ? ",..." : ""})` : "";
+                      return <option key={o.id} value={o.id}>{`${o.orderCode} | ${date} | ${partner} | ${total} ${itemSummary}`}</option>;
+                    })}
                   </optgroup>
                 </select>
               </div>
