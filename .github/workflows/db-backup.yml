@@ -1,9 +1,9 @@
 name: Auto-Backup Database to R2
 
 on:
-  # Chạy tự động lúc 2:00 AM sáng (giờ UTC) mỗi ngày
+  # Chạy tự động lúc 22:00 tối (giờ Việt Nam) mỗi ngày (15:00 UTC)
   schedule:
-    - cron: '0 2 * * *'
+    - cron: '0 15 * * *'
   # Cho phép kích hoạt chạy thủ công trên GitHub UI
   workflow_dispatch:
 
