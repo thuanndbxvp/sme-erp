@@ -1,0 +1,50 @@
+name: Auto-Backup Database to R2
+
+on:
+  # Chạy tự động lúc 2:00 AM sáng (giờ UTC) mỗi ngày
+  schedule:
+    - cron: '0 2 * * *'
+  # Cho phép kích hoạt chạy thủ công trên GitHub UI
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Install PostgreSQL Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Generate Backup Filename
+        id: vars
+        run: echo "DATE=$(date +'%Y-%m-%d_%H-%M-%S')" >> $GITHUB_ENV
+
+      - name: Dump Database and Compress
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          # Chạy lệnh pg_dump kết nối tới Neon và nén file lại
+          pg_dump $DATABASE_URL -F c > backup-${{ env.DATE }}.dump
+          ls -lh backup-${{ env.DATE }}.dump
+
+      - name: Configure AWS Credentials (for R2)
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          # R2 yêu cầu chọn region mặc định là auto hoặc weur, ta set auto
+          aws-region: auto
+
+      - name: Upload to Cloudflare R2
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          aws s3 cp backup-${{ env.DATE }}.dump \
+            s3://$R2_BUCKET/backup-${{ env.DATE }}.dump \
+            --endpoint-url https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com
