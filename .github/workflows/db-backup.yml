@@ -13,12 +13,7 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Install PostgreSQL Client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
+        uses: actions/checkout@v4
 
       - name: Generate Backup Filename
         id: vars
@@ -28,23 +23,23 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          # Chạy lệnh pg_dump kết nối tới Neon và nén file lại
-          pg_dump $DATABASE_URL -F c > backup-${{ env.DATE }}.dump
-          ls -lh backup-${{ env.DATE }}.dump
-
-      - name: Configure AWS Credentials (for R2)
-        uses: aws-actions/configure-aws-credentials@v3
-        with:
-          aws-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          # R2 yêu cầu chọn region mặc định là auto hoặc weur, ta set auto
-          aws-region: auto
+          set -e
+          BASE_URL=$(echo "$DATABASE_URL" | cut -d'?' -f1)
+          DIRECT_URL=$(echo "$BASE_URL" | sed 's/-pooler//g')
+          FINAL_URL="${DIRECT_URL}?sslmode=require"
+          
+          echo "Bắt đầu backup từ Direct URL sử dụng Docker Postgres (để tránh lỗi lệch phiên bản)..."
+          docker run --rm -v $(pwd):/workspace -w /workspace postgres:latest pg_dump "$FINAL_URL" -F c -f "backup-${{ env.DATE }}.dump"
+          ls -lh "backup-${{ env.DATE }}.dump"
 
       - name: Upload to Cloudflare R2
         env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
         run: |
-          aws s3 cp backup-${{ env.DATE }}.dump \
-            s3://$R2_BUCKET/backup-${{ env.DATE }}.dump \
-            --endpoint-url https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com
+          aws s3 cp "backup-${{ env.DATE }}.dump" \
+            "s3://$R2_BUCKET/backup-${{ env.DATE }}.dump" \
+            --endpoint-url "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com"
